@@ -6,6 +6,7 @@ import {
   CreateRoomPayloadSchema,
   GameSettingsSchema,
   JoinRoomPayloadSchema,
+  SetModifierSelectionSchema,
   SpyGuessPayloadSchema,
   VoiceSignalPayloadSchema,
 } from '../../../packages/shared/src/index';
@@ -59,6 +60,22 @@ export function setupSocketHandlers(io: SocketIOServer, roomManager: RoomManager
       if (parsed.success) {
         roomManager.updateSettings(socket, parsed.data);
       }
+    });
+
+    socket.on('room_set_modifier', (payload: unknown) => {
+      const parsed = SetModifierSelectionSchema.safeParse(payload);
+      if (!parsed.success) {
+        socket.emit('error_response', {
+          code: 'INVALID_MODIFIER_SELECTION',
+          message: parsed.error.issues[0]?.message || 'Неверная настройка модификатора.',
+        });
+        return;
+      }
+      roomManager.setModifierSelection(
+        socket,
+        parsed.data.modifierId,
+        parsed.data.isSelected
+      );
     });
 
     // 4. Ready Status

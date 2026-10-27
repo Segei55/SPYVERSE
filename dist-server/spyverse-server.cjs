@@ -61779,10 +61779,15 @@ var GameSettingsSchema = external_exports.object({
   roundDurationSeconds: external_exports.number().int().min(0).max(3600),
   spyCount: external_exports.number().int().min(1).max(5),
   packIds: external_exports.array(external_exports.string()).min(1, "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0445\u043E\u0442\u044F \u0431\u044B \u043E\u0434\u0438\u043D \u043D\u0430\u0431\u043E\u0440"),
+  modifierIds: external_exports.array(external_exports.string().min(1).max(64)).max(20).optional(),
   enableModifiers: external_exports.boolean(),
   allowEarlyAccusations: external_exports.boolean(),
   revoteOnTie: external_exports.boolean(),
   customPacks: external_exports.array(LocationPackSchema).max(50).optional()
+});
+var SetModifierSelectionSchema = external_exports.object({
+  modifierId: external_exports.string().min(1).max(64),
+  isSelected: external_exports.boolean()
 });
 var CreateRoomPayloadSchema = external_exports.object({
   hostName: external_exports.string().trim().min(1).max(24),
@@ -62619,9 +62624,10 @@ function assignRoles(players, pack, settings) {
     }
   }
   let selectedModifier = null;
-  if (settings.enableModifiers && AVAILABLE_MODIFIERS.length > 0) {
-    const modIdx = cryptoRandomInt(0, AVAILABLE_MODIFIERS.length - 1);
-    selectedModifier = { ...AVAILABLE_MODIFIERS[modIdx], active: true };
+  const allowedModifiers = settings.modifierIds ? AVAILABLE_MODIFIERS.filter((modifier) => settings.modifierIds?.includes(modifier.id)) : AVAILABLE_MODIFIERS;
+  if (settings.enableModifiers && allowedModifiers.length > 0) {
+    const modIdx = cryptoRandomInt(0, allowedModifiers.length - 1);
+    selectedModifier = { ...allowedModifiers[modIdx], active: true };
   }
   return {
     secretLocationName: secretLocation.name,
@@ -62762,6 +62768,7 @@ var RoomManager = class {
       roundDurationSeconds: 300,
       spyCount: 1,
       packIds: [defaultPack.id],
+      modifierIds: customSettings?.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id),
       enableModifiers: true,
       allowEarlyAccusations: true,
       revoteOnTie: true,
@@ -62861,9 +62868,25 @@ var RoomManager = class {
     const maxSpies = Math.max(1, Math.floor((room.players.size - 1) / 2));
     room.settings = {
       ...sharedSettings,
+      modifierIds: sharedSettings.modifierIds ?? room.settings.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id),
       spyCount: Math.min(sharedSettings.spyCount, maxSpies)
     };
     room.selectedPack = pack;
+    this.broadcastRoomUpdate(room);
+  }
+  setModifierSelection(socket, modifierId, isSelected) {
+    const room = this.getRoomBySocket(socket);
+    if (!room || room.socketToPlayer.get(socket.id) !== room.hostId) return;
+    if (!AVAILABLE_MODIFIERS.some((modifier) => modifier.id === modifierId)) return;
+    const selectedIds = new Set(
+      room.settings.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id)
+    );
+    if (isSelected) {
+      selectedIds.add(modifierId);
+    } else {
+      selectedIds.delete(modifierId);
+    }
+    room.settings = { ...room.settings, modifierIds: Array.from(selectedIds) };
     this.broadcastRoomUpdate(room);
   }
   setPlayerReady(socket, isReady) {
@@ -62886,6 +62909,14 @@ var RoomManager = class {
       socket.emit("error_response", {
         code: "NOT_ENOUGH_PLAYERS",
         message: "\u0414\u043B\u044F \u043D\u0430\u0447\u0430\u043B\u0430 \u0438\u0433\u0440\u044B \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E \u043C\u0438\u043D\u0438\u043C\u0443\u043C 3 \u0438\u0433\u0440\u043E\u043A\u0430."
+      });
+      return;
+    }
+    const maxSpies = Math.max(1, Math.floor((room.players.size - 1) / 2));
+    if (room.settings.spyCount > maxSpies) {
+      socket.emit("error_response", {
+        code: "INVALID_SPY_COUNT",
+        message: "\u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0448\u043F\u0438\u043E\u043D\u043E\u0432 \u043F\u0440\u0435\u0432\u044B\u0448\u0430\u0435\u0442 \u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u043E\u0435 \u0434\u043B\u044F \u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E \u0447\u0438\u0441\u043B\u0430 \u0438\u0433\u0440\u043E\u043A\u043E\u0432."
       });
       return;
     }
@@ -63200,6 +63231,7 @@ var RoomManager = class {
         const p = room.players.get(playerId);
         if (p && !p.isConnected && room.gameState.phase === "lobby") {
           room.players.delete(playerId);
+          this.normalizeSpyCount(room);
           this.broadcastRoomUpdate(room);
           if (room.players.size === 0) {
             this.rooms.delete(room.roomId);
@@ -63224,6 +63256,7 @@ var RoomManager = class {
     if (!player) return;
     if (room.gameState.phase === "lobby") {
       room.players.delete(playerId);
+      this.normalizeSpyCount(room);
       for (const [token, ownerId] of room.sessionTokens) {
         if (ownerId === playerId) room.sessionTokens.delete(token);
       }
@@ -63257,6 +63290,10 @@ var RoomManager = class {
       }
     }
     return void 0;
+  }
+  normalizeSpyCount(room) {
+    const maxSpies = Math.max(1, Math.floor((room.players.size - 1) / 2));
+    room.settings.spyCount = Math.min(room.settings.spyCount, maxSpies);
   }
   getPublicRoomState(room) {
     return {
@@ -63318,6 +63355,21 @@ function setupSocketHandlers(io3, roomManager2) {
       if (parsed.success) {
         roomManager2.updateSettings(socket, parsed.data);
       }
+    });
+    socket.on("room_set_modifier", (payload) => {
+      const parsed = SetModifierSelectionSchema.safeParse(payload);
+      if (!parsed.success) {
+        socket.emit("error_response", {
+          code: "INVALID_MODIFIER_SELECTION",
+          message: parsed.error.issues[0]?.message || "\u041D\u0435\u0432\u0435\u0440\u043D\u0430\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u043C\u043E\u0434\u0438\u0444\u0438\u043A\u0430\u0442\u043E\u0440\u0430."
+        });
+        return;
+      }
+      roomManager2.setModifierSelection(
+        socket,
+        parsed.data.modifierId,
+        parsed.data.isSelected
+      );
     });
     socket.on("player_ready", (isReady) => {
       roomManager2.setPlayerReady(socket, Boolean(isReady));

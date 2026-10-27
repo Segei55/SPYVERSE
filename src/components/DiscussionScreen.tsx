@@ -56,6 +56,7 @@ export const DiscussionScreen: React.FC<DiscussionScreenProps> = ({
   const timeLeft = gameState.roundTimeRemaining;
   const isTimeUnlimited = timeLeft <= 0;
   const modifier = gameState.currentModifier;
+  const isTimerHidden = modifier?.type === 'radio_static' && timeLeft > 0 && timeLeft <= 30;
 
   const handlePromptClick = () => {
     sound.playClick();
@@ -90,20 +91,24 @@ export const DiscussionScreen: React.FC<DiscussionScreenProps> = ({
       )}
 
       {/* Big Timer Card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-3 relative overflow-hidden">
+      <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 text-center space-y-3 relative overflow-hidden">
         <div className="flex items-center justify-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest">
           <Clock className="w-4 h-4 text-emerald-400" />
-          <span>Оставшееся время раунда</span>
+          <span>{isTimerHidden ? 'Радиопомехи: таймер скрыт' : 'Оставшееся время раунда'}</span>
         </div>
 
         <div
           className={`text-6xl sm:text-7xl font-mono font-black tracking-tight transition-colors ${
-            !isTimeUnlimited && timeLeft <= 30
-              ? 'text-rose-400 animate-pulse'
+            !isTimerHidden && !isTimeUnlimited && timeLeft <= 30
+              ? 'text-rose-400'
               : 'text-white'
           }`}
         >
-          {isTimeUnlimited ? '∞' : `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`}
+          {isTimerHidden
+            ? '??:??'
+            : isTimeUnlimited
+              ? '∞'
+              : `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`}
         </div>
 
         <p className="text-xs text-slate-400 max-w-md mx-auto">
@@ -128,7 +133,7 @@ export const DiscussionScreen: React.FC<DiscussionScreenProps> = ({
       </div>
 
       {/* Players Speaking Grid */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+      <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
             <Mic className="w-4 h-4 text-emerald-400" />
@@ -145,12 +150,12 @@ export const DiscussionScreen: React.FC<DiscussionScreenProps> = ({
                 key={p.id}
                 className={`p-3 rounded-2xl border transition-all text-center space-y-1.5 ${
                   p.isSpeaking
-                    ? 'bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-500/40 animate-pulse'
+                    ? 'bg-emerald-500/15 border-emerald-400 ring-1 ring-emerald-500/40'
                     : 'bg-slate-950/70 border-slate-800'
                 }`}
               >
-                <div className="w-10 h-10 mx-auto rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg">
-                  🕵️‍♂️
+                <div className="w-9 h-9 mx-auto rounded-md bg-slate-800 border border-slate-600 flex items-center justify-center text-xs font-mono font-semibold text-slate-300">
+                  {p.name.slice(0, 1).toUpperCase()}
                 </div>
                 <div className="font-bold text-xs text-white truncate">
                   {p.name} {isSelf && <span className="text-emerald-400 font-normal">(Вы)</span>}
@@ -165,7 +170,7 @@ export const DiscussionScreen: React.FC<DiscussionScreenProps> = ({
       </div>
 
       {/* Prompt Question Generator */}
-      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl">
+      <div className="case-surface p-4 rounded-2xl bg-slate-900 border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-slate-200">
           <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
           <span>{currentPrompt || 'Нажмите кнопку, чтобы получить подсказку для каверзного вопроса.'}</span>

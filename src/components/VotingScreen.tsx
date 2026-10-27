@@ -36,13 +36,13 @@ export const VotingScreen: React.FC<VotingScreenProps> = ({
 
   return (
     <div className="max-w-xl mx-auto p-4 sm:p-6 space-y-6 select-none animate-in fade-in duration-300">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+      <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6 text-center">
         {/* Header */}
         <div className="space-y-1">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/10">
             <Vote className="w-7 h-7 text-emerald-400" />
           </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-emerald-400 font-mono">
+          <span className="case-kicker">
             {gameState.revoteCount > 0 ? 'ПОВТОРНОЕ ГОЛОСОВАНИЕ (НИЧЬЯ)' : 'ОБЩЕЕ ГОЛОСОВАНИЕ'}
           </span>
           <h2 className="text-2xl font-black text-white">Кто шпион?</h2>
@@ -80,8 +80,8 @@ export const VotingScreen: React.FC<VotingScreenProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center">
-                    🕵️‍♂️
+                  <div className="w-8 h-8 rounded-md bg-slate-800 border border-slate-600 flex items-center justify-center text-xs font-mono font-semibold text-slate-300">
+                    {p.name.slice(0, 1).toUpperCase()}
                   </div>
                   <div>
                     <span className="text-sm text-white font-bold block">{p.name}</span>

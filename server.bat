@@ -8,13 +8,33 @@ rem Порт: первый аргумент или переменная PORT (п
 if not "%~1"=="" set "PORT=%~1"
 if "%PORT%"=="" set "PORT=3001"
 
+rem Если порт занят, используем следующий свободный порт, чтобы сервер не завершался с EADDRINUSE
+:find_free_port
+netstat -ano -p tcp | findstr /R /C:":%PORT% .*LISTENING" >nul
+if errorlevel 1 goto :port_ready
+echo [WARN] Порт %PORT% уже занят, проверяю следующий...
+set /a PORT+=1
+if %PORT% GTR 65535 goto :no_free_port
+goto :find_free_port
+
+:port_ready
+set "PORT=%PORT%"
+
 rem 1) Готовая сборка из GitHub Actions (рядом лежит spyverse-server.cjs)
 if exist "spyverse-server.cjs" (
   where node >nul 2>nul
-  if errorlevel 1 goto :no_node
-  echo [INFO] Запуск SPYVERSE Dedicated Server на порту %PORT%...
-  node spyverse-server.cjs
-  goto :end
+  if not errorlevel 1 (
+    echo [INFO] Запуск SPYVERSE Dedicated Server на порту %PORT%...
+    node "%~dp0spyverse-server.cjs"
+    goto :end
+  )
+
+  rem Установленная игра содержит Electron и может запустить сервер без Node.js
+  if exist "%~dp0SPYVERSE.exe" (
+    echo [INFO] Запуск сервера через SPYVERSE на порту %PORT%...
+    "%~dp0SPYVERSE.exe" --server
+    goto :end
+  )
 )
 
 rem 2) Запуск из исходников репозитория
@@ -44,6 +64,10 @@ goto :end
 
 :no_node
 echo [ОШИБКА] Node.js 20+ не найден. Установите его с https://nodejs.org и запустите файл снова.
+goto :end
+
+:no_free_port
+echo [ОШИБКА] Не удалось найти свободный TCP-порт.
 goto :end
 
 :fail

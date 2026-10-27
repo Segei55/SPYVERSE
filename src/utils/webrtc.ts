@@ -11,15 +11,19 @@ export type VolumeCallback = (volume: number) => void;
 export class WebRTCVoiceManager {
   private socket: Socket | null = null;
   private localStream: MediaStream | null = null;
+  private outgoingStream: MediaStream | null = null;
   private peerConnections: Map<string, RTCPeerConnection> = new Map();
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
+  private microphoneGain: GainNode | null = null;
   private animFrameId: number | null = null;
 
   private isMuted: boolean = false;
   private isPushToTalk: boolean = false;
   private isPttActive: boolean = false;
+  private isSpeaking: boolean = false;
   private selectedInputDeviceId: string = '';
+  private micGain = 1;
   private onSpeakingChange: SpeakingCallback | null = null;
   private onVolumeChange: VolumeCallback | null = null;
   private localPeerId: string | null = null;
@@ -38,6 +42,11 @@ export class WebRTCVoiceManager {
       if (savedPtt !== null) this.isPushToTalk = savedPtt === 'true';
       const savedDev = localStorage.getItem('spyverse_voice_device');
       if (savedDev) this.selectedInputDeviceId = savedDev;
+      const savedGain = localStorage.getItem('spyverse_mic_gain');
+      if (savedGain !== null) {
+        const parsedGain = Number(savedGain);
+        if (Number.isFinite(parsedGain)) this.micGain = Math.max(0, Math.min(2, parsedGain));
+      }
     } catch {}
   }
 
@@ -63,11 +72,12 @@ export class WebRTCVoiceManager {
 
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-      // Apply initial mute or PTT state
-      this.updateTrackState();
-
       // Setup audio analyzer for volume detection & speaking indicator
       this.setupVolumeAnalyzer();
+      if (this.audioContext?.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+      this.updateTrackState();
 
       // Если состав комнаты уже известен, создаём соединения с участниками
       if (this.localPeerId) {
@@ -77,6 +87,16 @@ export class WebRTCVoiceManager {
       return true;
     } catch (err) {
       console.warn('[WebRTC] Microphone access denied or unavailable:', err);
+      this.localStream?.getTracks().forEach((track) => track.stop());
+      this.localStream = null;
+      this.outgoingStream?.getTracks().forEach((track) => track.stop());
+      this.outgoingStream = null;
+      if (this.audioContext && this.audioContext.state !== 'closed') {
+        void this.audioContext.close();
+      }
+      this.audioContext = null;
+      this.analyser = null;
+      this.microphoneGain = null;
       return false;
     }
   }
@@ -90,10 +110,16 @@ export class WebRTCVoiceManager {
       this.localStream.getTracks().forEach((track) => track.stop());
       this.localStream = null;
     }
+    if (this.outgoingStream) {
+      this.outgoingStream.getTracks().forEach((track) => track.stop());
+      this.outgoingStream = null;
+    }
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
     }
+    this.analyser = null;
+    this.microphoneGain = null;
     for (const pc of this.peerConnections.values()) {
       pc.close();
     }
@@ -108,12 +134,19 @@ export class WebRTCVoiceManager {
       const source = this.audioContext.createMediaStreamSource(this.localStream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 256;
-      source.connect(this.analyser);
+      this.microphoneGain = this.audioContext.createGain();
+      this.microphoneGain.gain.value = this.micGain;
+      const output = this.audioContext.createMediaStreamDestination();
+      source.connect(this.microphoneGain);
+      this.microphoneGain.connect(this.analyser);
+      this.microphoneGain.connect(output);
+      this.outgoingStream = output.stream;
 
       const bufferLength = this.analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
-      let wasSpeaking = false;
+      let speakingCandidateSince = 0;
+      let speakingCandidate: boolean | null = null;
 
       const checkVolume = () => {
         if (!this.analyser) return;
@@ -130,15 +163,24 @@ export class WebRTCVoiceManager {
           this.onVolumeChange(normalizedVolume);
         }
 
-        const isSpeakingNow = !this.isMuted && (!this.isPushToTalk || this.isPttActive) && normalizedVolume > 15;
-        if (isSpeakingNow !== wasSpeaking) {
-          wasSpeaking = isSpeakingNow;
-          if (this.socket) {
-            this.socket.emit('voice_state_update', {
-              isMuted: this.isMuted,
-              isSpeaking: isSpeakingNow,
-            });
+        const voiceEnabled = !this.isMuted && (!this.isPushToTalk || this.isPttActive);
+        const isSpeakingNow = voiceEnabled && normalizedVolume > (this.isSpeaking ? 10 : 20);
+        if (isSpeakingNow !== this.isSpeaking) {
+          if (speakingCandidate !== isSpeakingNow) {
+            speakingCandidate = isSpeakingNow;
+            speakingCandidateSince = performance.now();
+          } else if (performance.now() - speakingCandidateSince >= (isSpeakingNow ? 200 : 450)) {
+            this.isSpeaking = isSpeakingNow;
+            speakingCandidate = null;
+            if (this.socket) {
+              this.socket.emit('voice_state_update', {
+                isMuted: this.isMuted,
+                isSpeaking: isSpeakingNow,
+              });
+            }
           }
+        } else {
+          speakingCandidate = null;
         }
 
         this.animFrameId = requestAnimationFrame(checkVolume);
@@ -147,11 +189,13 @@ export class WebRTCVoiceManager {
       checkVolume();
     } catch (err) {
       console.warn('[WebRTC] Analyzer init error:', err);
+      throw err;
     }
   }
 
   public setMuted(muted: boolean): void {
     this.isMuted = muted;
+    this.isSpeaking = false;
     try {
       localStorage.setItem('spyverse_voice_muted', muted.toString());
     } catch {}
@@ -166,6 +210,20 @@ export class WebRTCVoiceManager {
 
   public getIsMuted(): boolean {
     return this.isMuted;
+  }
+
+  public getMicrophoneGain(): number {
+    return this.micGain;
+  }
+
+  public setMicrophoneGain(gain: number): void {
+    this.micGain = Math.max(0, Math.min(2, gain));
+    try {
+      localStorage.setItem('spyverse_mic_gain', this.micGain.toString());
+    } catch {}
+    if (this.microphoneGain && this.audioContext) {
+      this.microphoneGain.gain.setTargetAtTime(this.micGain, this.audioContext.currentTime, 0.02);
+    }
   }
 
   public setPushToTalk(enabled: boolean): void {
@@ -190,6 +248,9 @@ export class WebRTCVoiceManager {
     if (!this.localStream) return;
     const shouldEnable = !this.isMuted && (!this.isPushToTalk || this.isPttActive);
     this.localStream.getAudioTracks().forEach((track) => {
+      track.enabled = true;
+    });
+    (this.outgoingStream ?? this.localStream).getAudioTracks().forEach((track) => {
       track.enabled = shouldEnable;
     });
   }
@@ -225,7 +286,8 @@ export class WebRTCVoiceManager {
     this.peerConnections.set(targetPeerId, pc);
 
     if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => pc.addTrack(track, this.localStream!));
+      const stream = this.outgoingStream ?? this.localStream;
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
     }
 
     pc.onicecandidate = (event) => {
@@ -263,7 +325,8 @@ export class WebRTCVoiceManager {
       this.peerConnections.set(senderPeerId, pc);
 
       if (this.localStream) {
-        this.localStream.getTracks().forEach((track) => pc!.addTrack(track, this.localStream!));
+        const stream = this.outgoingStream ?? this.localStream;
+        stream.getTracks().forEach((track) => pc!.addTrack(track, stream));
       }
 
       pc.onicecandidate = (event) => {

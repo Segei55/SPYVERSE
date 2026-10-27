@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Mic, MicOff, Radio, Volume2, ShieldAlert } from 'lucide-react';
+import { Mic, MicOff, Radio, ShieldAlert } from 'lucide-react';
 import { voiceManager } from '../utils/webrtc';
 import { sound } from '../utils/sound';
 import { Player } from '../../packages/shared/src/index';
@@ -13,8 +13,6 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
   const [isMuted, setIsMuted] = useState(voiceManager.getIsMuted());
   const [isPtt, setIsPtt] = useState(voiceManager.getIsPushToTalk());
   const [isPttPressed, setIsPttPressed] = useState(false);
-  const [micVolume, setMicVolume] = useState(0);
-  const [micActive, setMicActive] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
 
   // Микрофон запускаем один раз при монтировании: раньше каждое нажатие PTT его останавливало
@@ -23,7 +21,6 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
 
     voiceManager.startMicrophone().then((success) => {
       if (isMounted) {
-        setMicActive(success);
         if (!success) {
           setMicError('Микрофон не подключён или доступ заблокирован браузером.');
         }
@@ -155,7 +152,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
                 key={p.id}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                   p.isSpeaking
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400 animate-pulse ring-2 ring-emerald-500/40'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400 ring-1 ring-emerald-500/40'
                     : 'bg-slate-800/60 text-slate-400 border border-slate-700/50'
                 }`}
                 title={p.isSpeaking ? `${p.name} говорит` : p.name}
@@ -163,7 +160,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
                 <div
                   className={`w-2 h-2 rounded-full ${
                     p.isSpeaking
-                      ? 'bg-emerald-400 animate-ping'
+                      ? 'bg-emerald-400'
                       : p.isMuted
                       ? 'bg-rose-500'
                       : 'bg-slate-500'

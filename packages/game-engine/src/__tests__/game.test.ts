@@ -95,6 +95,47 @@ test('assignRoles correctly assigns spies and civilians without leaks', () => {
   }
 });
 
+test('assignRoles assigns the selected number of spies', () => {
+  const players = createMockPlayers(5);
+  const result = assignRoles(players, mockPack, { ...mockSettings, spyCount: 2 });
+  const spyCount = Object.values(result.secrets).filter((secret) => secret.isSpy).length;
+
+  assert.equal(spyCount, 2);
+});
+
+test('assignRoles selects only an enabled modifier from the configured list', () => {
+  const players = createMockPlayers(5);
+  const result = assignRoles(players, mockPack, {
+    ...mockSettings,
+    enableModifiers: true,
+    modifierIds: ['mod_blind_vote'],
+  });
+
+  assert.equal(result.modifier?.id, 'mod_blind_vote');
+});
+
+test('assignRoles skips modifiers when none are selected', () => {
+  const players = createMockPlayers(5);
+  const result = assignRoles(players, mockPack, {
+    ...mockSettings,
+    enableModifiers: true,
+    modifierIds: [],
+  });
+
+  assert.equal(result.modifier, null);
+});
+
+test('assignRoles skips selected modifiers when modifiers are disabled', () => {
+  const players = createMockPlayers(5);
+  const result = assignRoles(players, mockPack, {
+    ...mockSettings,
+    modifierIds: ['mod_blind_vote'],
+    enableModifiers: false,
+  });
+
+  assert.equal(result.modifier, null);
+});
+
 test('assignRoles rejects invalid player count and spy count', () => {
   const players2 = createMockPlayers(2);
   assert.throws(() => {

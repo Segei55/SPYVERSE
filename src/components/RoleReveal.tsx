@@ -24,11 +24,11 @@ export const RoleReveal: React.FC<RoleRevealProps> = ({ secret, playerName, onAc
 
   return (
     <div className="max-w-xl mx-auto p-4 sm:p-6 select-none animate-in fade-in duration-300">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+      <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6">
         {/* Header */}
         <div className="text-center space-y-1">
           <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 font-mono">
-            СЕКРЕТНЫЙ ДОСТУП УРОВНЯ ОМЕГА
+            МАТЕРИАЛЫ ДЕЛА · ЛИЧНЫЙ ЭКЗЕМПЛЯР
           </span>
           <h2 className="text-xl sm:text-2xl font-black text-white">
             Личное дело: {playerName}
@@ -38,8 +38,8 @@ export const RoleReveal: React.FC<RoleRevealProps> = ({ secret, playerName, onAc
           </p>
         </div>
 
-        {/* Biometric Reveal Toggle Card */}
-        <div className="p-6 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-4">
+        {/* Private role reveal */}
+        <div className="p-6 rounded-xl bg-slate-950 border border-slate-700 text-center space-y-4">
           <button
             onClick={toggleReveal}
             className={`w-full py-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -58,8 +58,8 @@ export const RoleReveal: React.FC<RoleRevealProps> = ({ secret, playerName, onAc
                 /* SPY DOSSIER */
                 <div className="p-5 rounded-2xl bg-rose-950/40 border border-rose-500/50 text-left space-y-4">
                   <div className="flex items-center gap-2 text-rose-400 font-black text-base">
-                    <ShieldAlert className="w-6 h-6 animate-pulse" />
-                    <span>ВНИМАНИЕ! ВЫ ШПИОН!</span>
+                    <ShieldAlert className="w-5 h-5" />
+                    <span>ДЕЛО ОСОБОЙ ВАЖНОСТИ · ВЫ ШПИОН</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
                     Вы не знаете секретную локацию! Ваша задача — задавать уклончивые вопросы, не выдать себя и вычислить локацию среди возможных кандидатов.

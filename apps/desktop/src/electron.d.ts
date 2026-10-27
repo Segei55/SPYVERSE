@@ -12,6 +12,7 @@ declare module 'electron' {
       contextIsolation?: boolean;
       nodeIntegration?: boolean;
       sandbox?: boolean;
+      additionalArguments?: string[];
     };
   }
 

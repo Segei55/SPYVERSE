@@ -8,7 +8,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "apps/desktop/dist/main.js",
+  "main": "apps/desktop/dist/main.cjs",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -22,7 +22,7 @@
     "test": "npx --yes tsx --test packages/game-engine/src/__tests__/game.test.ts packages/game-engine/src/__tests__/content.test.ts",
     "start:server": "tsx apps/server/src/standalone.ts",
     "build:server": "esbuild apps/server/src/standalone.ts --bundle --platform=node --target=node20 --outfile=dist-server/spyverse-server.cjs",
-    "build:desktop": "npm run build && npm run build -w @spyverse/desktop && electron-builder --config apps/desktop/electron-builder.json --dir",
+    "build:desktop": "npm run build:server && npm run build && npm run build -w @spyverse/desktop && electron-builder --config apps/desktop/electron-builder.json --dir",
     "build:mobile": "npm run build && npm run sync -w @spyverse/mobile"
   },
   "dependencies": {

@@ -1,1 +1,128 @@
 @import "tailwindcss";
+
+@theme {
+  --color-slate-950: #12130f;
+  --color-slate-900: #1b1c17;
+  --color-slate-800: #282921;
+  --color-slate-700: #393a30;
+  --color-slate-600: #535448;
+  --color-slate-500: #727365;
+  --color-slate-400: #a4a493;
+  --color-slate-300: #c6c5b5;
+  --color-slate-200: #dedccd;
+  --color-slate-100: #eeecdf;
+  --color-slate-50: #f7f5eb;
+  --color-emerald-950: #28281e;
+  --color-emerald-900: #343222;
+  --color-emerald-800: #4a4329;
+  --color-emerald-700: #6b5b36;
+  --color-emerald-600: #897341;
+  --color-emerald-500: #a58a4d;
+  --color-emerald-400: #c3a967;
+  --color-emerald-300: #d7c58e;
+  --color-emerald-200: #e6d8ad;
+  --color-emerald-100: #f0e8ce;
+  --color-emerald-50: #f7f3e5;
+  --color-teal-950: #24261e;
+  --color-teal-900: #303226;
+  --color-teal-800: #424632;
+  --color-teal-700: #62694c;
+  --color-teal-600: #737b59;
+  --color-teal-500: #878b68;
+  --color-teal-400: #a8ad83;
+  --color-teal-300: #c2c59d;
+  --color-cyan-950: #22261f;
+  --color-cyan-900: #2e3329;
+  --color-cyan-800: #424a3b;
+  --color-cyan-700: #5a684f;
+  --color-cyan-600: #6a795f;
+  --color-cyan-500: #78866f;
+  --color-cyan-400: #9baa8d;
+  --color-cyan-300: #b7c3a8;
+  --color-amber-950: #30291c;
+  --color-amber-900: #3a311f;
+  --color-amber-800: #51432b;
+  --color-amber-700: #776139;
+  --color-amber-600: #947944;
+  --color-amber-500: #a98d50;
+  --color-amber-400: #c4a765;
+  --color-amber-300: #dfc587;
+  --color-rose-950: #321f1d;
+  --color-rose-900: #402522;
+  --color-rose-800: #5c332d;
+  --color-rose-700: #80463c;
+  --color-rose-600: #964f43;
+  --color-rose-500: #a45e50;
+  --color-rose-400: #c27b69;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.2rem;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: Inter, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: #12130f;
+}
+
+.case-app {
+  position: relative;
+  isolation: isolate;
+  background-color: #12130f;
+  background-image:
+    radial-gradient(ellipse at 50% -18%, rgba(166, 139, 77, 0.12), transparent 58%),
+    linear-gradient(135deg, rgba(40, 41, 33, 0.28), transparent 42%),
+    repeating-linear-gradient(0deg, rgba(228, 219, 180, 0.014) 0, rgba(228, 219, 180, 0.014) 1px, transparent 1px, transparent 38px),
+    repeating-linear-gradient(90deg, rgba(228, 219, 180, 0.012) 0, rgba(228, 219, 180, 0.012) 1px, transparent 1px, transparent 38px);
+}
+
+.case-app::before {
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.24) 100%);
+}
+
+.case-surface {
+  background-image: linear-gradient(145deg, rgba(37, 37, 29, 0.97), rgba(25, 26, 21, 0.98));
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+}
+
+.case-kicker {
+  color: #c3a967;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.case-index {
+  color: #b4a77d;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.case-app .animate-pulse,
+.case-app .animate-ping {
+  animation-duration: 2.8s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -36,7 +36,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
 
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 select-none animate-in fade-in duration-300 space-y-6">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
+      <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 text-center space-y-6">
         {/* Trophy / Result Icon */}
         <div
           className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-xl ${
@@ -83,7 +83,7 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
               {gameState.secretLocationName || 'Засекречено'}
             </div>
           </div>
-          <div className="text-2xl">📍</div>
+          <MapPin className="mr-1 h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
         </div>
 
         {/* Roles of all players */}
@@ -108,7 +108,9 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <span className="text-base">{isSpy ? '🕵️‍♂️' : '👤'}</span>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-600 bg-slate-800 font-mono text-xs font-semibold text-slate-300">
+                      {p.name.slice(0, 1).toUpperCase()}
+                    </span>
                     <div>
                       <span className="font-bold text-white block">{p.name}</span>
                       <span className="text-[11px] text-slate-400">

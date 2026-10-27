@@ -1,5 +1,13 @@
 import { io, Socket } from 'socket.io-client';
 
+declare global {
+  interface Window {
+    electronAPI?: {
+      serverUrl: string;
+    };
+  }
+}
+
 let currentSocket: Socket | null = null;
 let currentServerUrl: string = '';
 
@@ -18,9 +26,14 @@ export function setStoredServerUrl(url: string): void {
 }
 
 export function getSocket(customUrl?: string): Socket {
-  const targetUrl = customUrl || getStoredServerUrl() || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  const defaultUrl =
+    typeof window !== 'undefined'
+      ? window.electronAPI?.serverUrl ||
+        (window.location.protocol === 'file:' ? 'http://127.0.0.1:3001' : window.location.origin)
+      : 'http://localhost:3000';
+  const targetUrl = customUrl || getStoredServerUrl() || defaultUrl;
 
-  if (currentSocket && currentServerUrl === targetUrl && currentSocket.connected) {
+  if (currentSocket && currentServerUrl === targetUrl) {
     return currentSocket;
   }
 

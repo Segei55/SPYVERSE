@@ -9,6 +9,7 @@ import {
   RoomState,
 } from '../packages/shared/src/index';
 import { OFFICIAL_PACKS } from '../packages/content/src/index';
+import { AVAILABLE_MODIFIERS } from '../packages/game-engine/src/index';
 import { getSocket, disconnectSocket } from './utils/socket';
 import { voiceManager } from './utils/webrtc';
 import { sound } from './utils/sound';
@@ -58,6 +59,8 @@ export function App() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasAcknowledgedRole, setHasAcknowledgedRole] = useState(false);
   const [isEarlyGuessOpen, setIsEarlyGuessOpen] = useState(false);
+  const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isConnectingRef = useRef(false);
 
   // Актуальные значения для обработчиков сокета, чтобы не перевешивать их при каждом обновлении
   const localPlayerRef = useRef<Player | null>(null);
@@ -97,6 +100,8 @@ export function App() {
     );
 
     socket.on('room_created', (data: { roomId: string; sessionToken: string; player: Player }) => {
+      isConnectingRef.current = false;
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
       setIsConnecting(false);
       setLocalPlayer(data.player);
       setCurrentMode('online');
@@ -106,6 +111,8 @@ export function App() {
     });
 
     socket.on('room_joined', (data: { roomId: string; sessionToken: string; player: Player }) => {
+      isConnectingRef.current = false;
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
       setIsConnecting(false);
       setLocalPlayer(data.player);
       setCurrentMode('online');
@@ -156,13 +163,24 @@ export function App() {
     });
 
     socket.on('error_response', (err: { code: string; message: string }) => {
+      isConnectingRef.current = false;
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
       setIsConnecting(false);
       setErrorMessage(err.message);
       sound.playAlarm();
       setTimeout(() => setErrorMessage(null), 5000);
     });
 
+    socket.on('connect_error', (error: Error) => {
+      if (!isConnectingRef.current) return;
+      isConnectingRef.current = false;
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+      setIsConnecting(false);
+      setErrorMessage(`Не удалось подключиться к серверу: ${error.message}`);
+    });
+
     return () => {
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
       socket.off('room_created');
       socket.off('room_joined');
       socket.off('room_state_update');
@@ -170,6 +188,7 @@ export function App() {
       socket.off('chat_message');
       socket.off('voice_state_changed');
       socket.off('error_response');
+      socket.off('connect_error');
     };
   }, []);
 
@@ -184,7 +203,15 @@ export function App() {
 
   // Online actions
   const handleCreateRoom = (hostName: string) => {
+    isConnectingRef.current = true;
     setIsConnecting(true);
+    if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+    connectionTimeoutRef.current = setTimeout(() => {
+      if (!isConnectingRef.current) return;
+      isConnectingRef.current = false;
+      setIsConnecting(false);
+      setErrorMessage('Сервер не ответил. Проверьте его запуск и адрес сервера в настройках.');
+    }, 15000);
     const socket = getSocket();
     socket.emit('room_create', {
       hostName,
@@ -193,6 +220,7 @@ export function App() {
         roundDurationSeconds: 300,
         spyCount: 1,
         packIds: [OFFICIAL_PACKS[0].id],
+        modifierIds: AVAILABLE_MODIFIERS.map((modifier) => modifier.id),
         enableModifiers: true,
         allowEarlyAccusations: true,
         revoteOnTie: true,
@@ -201,7 +229,15 @@ export function App() {
   };
 
   const handleJoinRoom = (roomId: string, playerName: string) => {
+    isConnectingRef.current = true;
     setIsConnecting(true);
+    if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+    connectionTimeoutRef.current = setTimeout(() => {
+      if (!isConnectingRef.current) return;
+      isConnectingRef.current = false;
+      setIsConnecting(false);
+      setErrorMessage('Сервер не ответил. Проверьте его запуск и адрес сервера в настройках.');
+    }, 15000);
     const socket = getSocket();
     const sessionToken = sessionStorage.getItem('spyverse_session') || undefined;
     socket.emit('room_join', {
@@ -217,6 +253,10 @@ export function App() {
     // Сервер не хранит пользовательские наборы: передаём выбранный набор вместе с настройками
     const selectedCustomPacks = customPacks.filter((p) => settings.packIds.includes(p.id));
     socket.emit('room_update_settings', { ...settings, customPacks: selectedCustomPacks });
+  };
+
+  const handleSetModifier = (modifierId: string, isSelected: boolean) => {
+    getSocket().emit('room_set_modifier', { modifierId, isSelected });
   };
 
   const handleSetReady = (isReady: boolean) => {
@@ -279,7 +319,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
+    <div className="case-app min-h-screen bg-[#12130f] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
       {/* Top Navbar */}
       <Navbar
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -344,6 +384,7 @@ export function App() {
                 localPlayer={localPlayer}
                 customPacks={customPacks}
                 onUpdateSettings={handleUpdateSettings}
+                onSetModifier={handleSetModifier}
                 onSetReady={handleSetReady}
                 onStartGame={handleStartGame}
                 onOpenChat={handleOpenChat}

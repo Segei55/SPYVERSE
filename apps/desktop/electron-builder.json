@@ -12,6 +12,21 @@
     "apps/desktop/dist/**/*"
   ],
   "win": {
+    "extraFiles": [
+      {
+        "from": "server.bat",
+        "to": "server.bat"
+      },
+      {
+        "from": "dist-server/spyverse-server.cjs",
+        "to": "spyverse-server.cjs"
+      },
+      {
+        "from": "dist",
+        "to": "dist",
+        "filter": ["**/*"]
+      }
+    ],
     "target": [
       {
         "target": "nsis",

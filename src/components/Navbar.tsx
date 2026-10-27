@@ -27,17 +27,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="h-16 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 select-none">
+    <header className="h-16 border-b border-slate-700/80 bg-slate-950/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 select-none">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/30">
-          <Shield className="w-5 h-5 text-slate-950 font-bold" />
+        <div className="w-9 h-9 rounded-lg bg-emerald-950 border border-emerald-400/40 flex items-center justify-center">
+          <Shield className="w-4 h-4 text-emerald-300 font-bold" />
         </div>
         <div>
-          <span className="text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 font-mono">
+          <span className="text-lg font-bold tracking-[0.18em] text-slate-100 font-mono">
             SPYVERSE
           </span>
-          <span className="hidden sm:inline-block ml-2 text-[10px] tracking-widest uppercase font-semibold px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-500/30 text-emerald-400">
-            v1.0
+          <span className="hidden sm:inline-block ml-2 text-[9px] tracking-widest uppercase font-semibold px-2 py-0.5 rounded-sm bg-slate-900 border border-slate-700 text-slate-400">
+            CASE FILE
           </span>
         </div>
       </div>

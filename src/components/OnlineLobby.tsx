@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Users,
   Play,
@@ -19,6 +19,7 @@ import {
   RoomState,
 } from '../../packages/shared/src/index';
 import { OFFICIAL_PACKS } from '../../packages/content/src/index';
+import { AVAILABLE_MODIFIERS } from '../../packages/game-engine/src/index';
 import { sound } from '../utils/sound';
 
 interface OnlineLobbyProps {
@@ -26,6 +27,7 @@ interface OnlineLobbyProps {
   localPlayer: Player;
   customPacks: LocationPack[];
   onUpdateSettings: (settings: GameSettings) => void;
+  onSetModifier: (modifierId: string, isSelected: boolean) => void;
   onSetReady: (isReady: boolean) => void;
   onStartGame: () => void;
   onOpenChat: () => void;
@@ -37,17 +39,37 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
   localPlayer,
   customPacks,
   onUpdateSettings,
+  onSetModifier,
   onSetReady,
   onStartGame,
   onOpenChat,
   unreadChatCount = 0,
 }) => {
   const [copiedCode, setCopiedCode] = useState(false);
+  const [modifierIds, setModifierIds] = useState<string[]>(
+    () => roomState.settings.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id)
+  );
+  const [customDurationMinutes, setCustomDurationMinutes] = useState(() =>
+    roomState.settings.roundDurationSeconds > 0
+      ? String(roomState.settings.roundDurationSeconds / 60)
+      : ''
+  );
   const allPacks = [...OFFICIAL_PACKS, ...customPacks];
 
   const isHost = localPlayer.isHost;
   const players = roomState.players;
   const settings = roomState.settings;
+  const maxSpies = Math.min(5, Math.max(1, Math.floor((players.length - 1) / 2)));
+
+  useEffect(() => {
+    setCustomDurationMinutes(
+      settings.roundDurationSeconds > 0 ? String(settings.roundDurationSeconds / 60) : ''
+    );
+  }, [settings.roundDurationSeconds]);
+
+  useEffect(() => {
+    setModifierIds(settings.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id));
+  }, [settings.modifierIds]);
 
   const copyRoomCode = () => {
     sound.playClick();
@@ -83,7 +105,18 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
     });
   };
 
-  const handleToggleModifiers = () => {
+  const handleSetModifier = (modifierId: string, isSelected: boolean) => {
+    if (!isHost) return;
+    sound.playClick();
+    setModifierIds((current) =>
+      isSelected
+        ? current.includes(modifierId) ? current : [...current, modifierId]
+        : current.filter((id) => id !== modifierId)
+    );
+    onSetModifier(modifierId, isSelected);
+  };
+
+  const handleToggleModifiersEnabled = () => {
     if (!isHost) return;
     sound.playClick();
     onUpdateSettings({
@@ -95,19 +128,19 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
   const canStart = players.length >= 3;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6 select-none">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6 select-none animate-in fade-in duration-300">
       {/* Top Banner: Room Code & Quick Actions */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/10">
-            <Shield className="w-7 h-7 text-emerald-400" />
+          <div className="w-12 h-12 rounded-lg bg-emerald-950/70 border border-emerald-400/30 flex items-center justify-center">
+            <Shield className="w-6 h-6 text-emerald-300" />
           </div>
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 block">
-              КОД СЕКРЕТНОЙ КОМНАТЫ
+            <span className="case-kicker block">
+              КОД ДЕЛА · КОМНАТА
             </span>
             <div className="flex items-center gap-3">
-              <span className="text-3xl font-black font-mono tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+              <span className="text-3xl font-bold font-mono tracking-[0.18em] text-emerald-300">
                 {roomState.roomId}
               </span>
               <button
@@ -182,7 +215,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
       {/* Main Grid: Player Roster & Game Settings */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Players Roster */}
-        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
+        <div className="case-surface lg:col-span-2 bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
               <Users className="w-4 h-4 text-emerald-400" />
@@ -204,8 +237,8 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg">
-                      🕵️‍♂️
+                    <div className="w-9 h-9 rounded-md bg-slate-800 border border-slate-600 flex items-center justify-center text-xs font-mono font-semibold text-slate-300">
+                      {p.name.slice(0, 1).toUpperCase()}
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -243,7 +276,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
         </div>
 
         {/* Settings Column */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
               <Settings className="w-4 h-4 text-cyan-400" />
@@ -306,6 +339,28 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
                 </button>
               ))}
             </div>
+            <label className="mt-2 flex items-center gap-2 text-[11px] text-slate-400">
+              Или введите минуты (1–60)
+              <input
+                type="number"
+                min={1}
+                max={60}
+                step={1}
+                disabled={!isHost}
+                value={customDurationMinutes}
+                onChange={(event) => {
+                  setCustomDurationMinutes(event.target.value);
+                }}
+                onBlur={() => {
+                  const minutes = Number(customDurationMinutes);
+                  if (Number.isInteger(minutes) && minutes >= 1 && minutes <= 60) {
+                    handleDurationChange(minutes * 60);
+                  }
+                }}
+                className="w-16 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-center text-xs text-white disabled:opacity-70"
+                aria-label="Таймер раунда в минутах"
+              />
+            </label>
           </div>
 
           {/* Spies Count */}
@@ -315,7 +370,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
               <span className="text-rose-400 font-mono text-xs">{settings.spyCount}</span>
             </label>
             <div className="flex gap-2">
-              {[1, 2].map((num) => (
+              {Array.from({ length: maxSpies }, (_, index) => index + 1).map((num) => (
                 <button
                   key={num}
                   disabled={!isHost}
@@ -331,28 +386,62 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
                 </button>
               ))}
             </div>
+            <p className="mt-1 text-[10px] text-slate-500">
+              Доступно для {players.length} игроков: до {maxSpies} {maxSpies === 1 ? 'шпиона' : 'шпионов'}
+            </p>
           </div>
 
           {/* Modifiers */}
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-semibold text-slate-300">Модификаторы событий</span>
-            </div>
-            <button
-              disabled={!isHost}
-              type="button"
-              onClick={handleToggleModifiers}
-              className={`w-11 h-6 rounded-full p-1 transition-colors cursor-pointer ${
-                settings.enableModifiers ? 'bg-emerald-500' : 'bg-slate-800'
-              }`}
-            >
-              <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                  settings.enableModifiers ? 'translate-x-5' : 'translate-x-0'
+          <div className="pt-3 border-t border-slate-800/80 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-semibold text-slate-300">Модификаторы раунда</span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={settings.enableModifiers}
+                aria-label="Включить модификаторы раунда"
+                disabled={!isHost}
+                onClick={handleToggleModifiersEnabled}
+                className={`relative h-5 w-9 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                  settings.enableModifiers ? 'bg-emerald-500' : 'bg-slate-700'
                 }`}
-              />
-            </button>
+              >
+                <span
+                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                    settings.enableModifiers ? 'left-[18px]' : 'left-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+            <div className="space-y-1">
+              {AVAILABLE_MODIFIERS.map((modifier) => {
+                const isSelected = modifierIds.includes(modifier.id);
+                return (
+                  <label
+                    key={modifier.id}
+                    title={modifier.description}
+                    className={`group relative flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] transition-colors ${
+                      isSelected ? 'bg-amber-500/10 text-amber-200' : 'text-slate-400 hover:bg-slate-800'
+                    } ${!isHost ? 'cursor-default' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      disabled={!isHost}
+                      checked={isSelected}
+                      onChange={(event) => handleSetModifier(modifier.id, event.currentTarget.checked)}
+                      className="accent-amber-400"
+                    />
+                    <span>{modifier.name}</span>
+                    <span className="pointer-events-none absolute bottom-full left-0 z-20 mb-1 hidden w-56 rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] leading-relaxed text-slate-200 shadow-xl group-hover:block group-focus-within:block">
+                      {modifier.description}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

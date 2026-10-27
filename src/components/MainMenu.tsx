@@ -8,7 +8,6 @@ import {
   Server,
   Settings,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 import { sound } from '../utils/sound';
 import { OFFICIAL_PACKS } from '../../packages/content/src/index';
@@ -64,22 +63,20 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-8 select-none animate-in fade-in duration-300">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-8 select-none animate-in fade-in duration-500">
       {/* Hero Section */}
-      <div className="text-center space-y-4 pt-4 sm:pt-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-xs font-mono font-semibold tracking-wider">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>СОЦИАЛЬНАЯ ИГРА В СТИЛЕ «ШПИОН» ДЛЯ ДРУЗЕЙ</span>
+      <div className="relative border-y border-slate-700/80 py-7 sm:py-9">
+        <div className="case-kicker mb-3 flex items-center gap-2">
+          <span className="inline-block h-px w-8 bg-emerald-400/70" />
+          <span>Отдел расследований · Дело № 001</span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white font-mono">
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
-            SPYVERSE
-          </span>
+        <h1 className="text-4xl sm:text-6xl font-bold tracking-[0.12em] text-slate-100 font-mono">
+          SPYVERSE
         </h1>
 
-        <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-          Один из участников — шпион, не знающий секретную локацию. Задавайте наводящие вопросы, блефуйте, вычисляйте предателя или угадайте объект до конца раунда!
+        <p className="text-slate-300 text-sm sm:text-base max-w-2xl mt-3 leading-relaxed">
+          В деле есть неизвестная переменная: один из игроков не знает локацию. Задавайте вопросы, сопоставляйте показания и вычислите шпиона до конца раунда.
         </p>
       </div>
 
@@ -87,13 +84,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {mode === 'idle' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* 1. Host Network Room */}
-          <div className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-6 flex flex-col justify-between transition-all group shadow-xl">
+          <div className="case-surface bg-slate-900 border border-slate-700 hover:border-emerald-400/60 rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 group">
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+              <div className="flex items-center justify-between">
+                <span className="case-index">01 / СЕТЕВАЯ ОПЕРАЦИЯ</span>
+                <div className="w-10 h-10 rounded-lg bg-emerald-950/70 border border-emerald-400/30 flex items-center justify-center text-emerald-300">
                 <Wifi className="w-6 h-6" />
+                </div>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">
+                <h3 className="text-lg font-semibold text-slate-100 group-hover:text-emerald-300 transition-colors">
                   Создать комнату
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
@@ -107,7 +107,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 sound.playClick();
                 setMode('create');
               }}
-              className="mt-6 w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20"
+              className="mt-6 w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs uppercase tracking-wider transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Создать игру</span>
               <ArrowRight className="w-4 h-4" />
@@ -115,13 +115,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </div>
 
           {/* 2. Join Network Room */}
-          <div className="bg-slate-900 border border-slate-800 hover:border-cyan-500/50 rounded-3xl p-6 flex flex-col justify-between transition-all group shadow-xl">
+          <div className="case-surface bg-slate-900 border border-slate-700 hover:border-cyan-400/60 rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 group">
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+              <div className="flex items-center justify-between">
+                <span className="case-index">02 / ПОДКЛЮЧЕНИЕ</span>
+                <div className="w-10 h-10 rounded-lg bg-cyan-950/70 border border-cyan-400/30 flex items-center justify-center text-cyan-300">
                 <Users className="w-6 h-6" />
+                </div>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">
+                <h3 className="text-lg font-semibold text-slate-100 group-hover:text-cyan-300 transition-colors">
                   Войти по коду
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
@@ -135,7 +138,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 sound.playClick();
                 setMode('join');
               }}
-              className="mt-6 w-full py-3 bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-700/80"
+              className="mt-6 w-full py-3 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-slate-100 font-semibold rounded-lg text-xs uppercase tracking-wider transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
             >
               <span>Ввести код</span>
               <ArrowRight className="w-4 h-4" />
@@ -143,13 +146,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </div>
 
           {/* 3. Pass & Play Offline */}
-          <div className="bg-slate-900 border border-slate-800 hover:border-teal-500/50 rounded-3xl p-6 flex flex-col justify-between transition-all group shadow-xl">
+          <div className="case-surface bg-slate-900 border border-slate-700 hover:border-teal-400/60 rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 group">
             <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-110 transition-transform">
+              <div className="flex items-center justify-between">
+                <span className="case-index">03 / ОДНО УСТРОЙСТВО</span>
+                <div className="w-10 h-10 rounded-lg bg-teal-950/70 border border-teal-400/30 flex items-center justify-center text-teal-300">
                 <Play className="w-6 h-6" />
+                </div>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white group-hover:text-teal-400 transition-colors">
+                <h3 className="text-lg font-semibold text-slate-100 group-hover:text-teal-300 transition-colors">
                   Офлайн (Один экран)
                 </h3>
                 <p className="text-xs text-slate-400 mt-1 leading-relaxed">
@@ -163,7 +169,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 sound.playClick();
                 onStartPassAndPlay();
               }}
-              className="mt-6 w-full py-3 bg-slate-800 hover:bg-slate-700 text-teal-400 hover:text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-700/80"
+              className="mt-6 w-full py-3 bg-slate-800 hover:bg-slate-700 text-teal-300 hover:text-slate-100 font-semibold rounded-lg text-xs uppercase tracking-wider transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
             >
               <span>Играть локально</span>
               <ArrowRight className="w-4 h-4" />
@@ -174,7 +180,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* Mode: Create Room Form */}
       {mode === 'create' && (
-        <div className="max-w-md mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+        <div className="case-surface max-w-md mx-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-5 animate-in zoom-in-95 duration-300">
           <div className="text-center">
             <h3 className="text-xl font-black text-white">Создание новой комнаты</h3>
             <p className="text-xs text-slate-400 mt-1">Вы будете хостом и сможете управлять настройками</p>
@@ -216,7 +222,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* Mode: Join Room Form */}
       {mode === 'join' && (
-        <div className="max-w-md mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+        <div className="case-surface max-w-md mx-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-5 animate-in zoom-in-95 duration-300">
           <div className="text-center">
             <h3 className="text-xl font-black text-white">Подключение к комнате</h3>
             <p className="text-xs text-slate-400 mt-1">Введите код комнаты, полученный от хоста</p>

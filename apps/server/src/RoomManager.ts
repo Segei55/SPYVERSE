@@ -10,6 +10,7 @@ import {
 } from '../../../packages/shared/src/index';
 import { OFFICIAL_PACKS, findPackById } from '../../../packages/content/src/index';
 import {
+  AVAILABLE_MODIFIERS,
   assignRoles,
   calculateVoteResults,
   checkSpyGuess,
@@ -80,6 +81,7 @@ export class RoomManager {
       roundDurationSeconds: 300,
       spyCount: 1,
       packIds: [defaultPack.id],
+      modifierIds: customSettings?.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id),
       enableModifiers: true,
       allowEarlyAccusations: true,
       revoteOnTie: true,
@@ -211,10 +213,32 @@ export class RoomManager {
     const maxSpies = Math.max(1, Math.floor((room.players.size - 1) / 2));
     room.settings = {
       ...sharedSettings,
+      modifierIds:
+        sharedSettings.modifierIds ??
+        room.settings.modifierIds ??
+        AVAILABLE_MODIFIERS.map((modifier) => modifier.id),
       spyCount: Math.min(sharedSettings.spyCount, maxSpies),
     };
     room.selectedPack = pack;
 
+    this.broadcastRoomUpdate(room);
+  }
+
+  public setModifierSelection(socket: Socket, modifierId: string, isSelected: boolean): void {
+    const room = this.getRoomBySocket(socket);
+    if (!room || room.socketToPlayer.get(socket.id) !== room.hostId) return;
+    if (!AVAILABLE_MODIFIERS.some((modifier) => modifier.id === modifierId)) return;
+
+    const selectedIds = new Set(
+      room.settings.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id)
+    );
+    if (isSelected) {
+      selectedIds.add(modifierId);
+    } else {
+      selectedIds.delete(modifierId);
+    }
+
+    room.settings = { ...room.settings, modifierIds: Array.from(selectedIds) };
     this.broadcastRoomUpdate(room);
   }
 
@@ -241,6 +265,15 @@ export class RoomManager {
       socket.emit('error_response', {
         code: 'NOT_ENOUGH_PLAYERS',
         message: 'Для начала игры необходимо минимум 3 игрока.',
+      });
+      return;
+    }
+
+    const maxSpies = Math.max(1, Math.floor((room.players.size - 1) / 2));
+    if (room.settings.spyCount > maxSpies) {
+      socket.emit('error_response', {
+        code: 'INVALID_SPY_COUNT',
+        message: 'Количество шпионов превышает допустимое для текущего числа игроков.',
       });
       return;
     }
@@ -635,6 +668,7 @@ export class RoomManager {
         const p = room.players.get(playerId);
         if (p && !p.isConnected && room.gameState.phase === 'lobby') {
           room.players.delete(playerId);
+          this.normalizeSpyCount(room);
           this.broadcastRoomUpdate(room);
           if (room.players.size === 0) {
             this.rooms.delete(room.roomId);
@@ -663,6 +697,7 @@ export class RoomManager {
 
     if (room.gameState.phase === 'lobby') {
       room.players.delete(playerId);
+      this.normalizeSpyCount(room);
       for (const [token, ownerId] of room.sessionTokens) {
         if (ownerId === playerId) room.sessionTokens.delete(token);
       }
@@ -701,6 +736,11 @@ export class RoomManager {
       }
     }
     return undefined;
+  }
+
+  private normalizeSpyCount(room: ServerRoom): void {
+    const maxSpies = Math.max(1, Math.floor((room.players.size - 1) / 2));
+    room.settings.spyCount = Math.min(room.settings.spyCount, maxSpies);
   }
 
   public getPublicRoomState(room: ServerRoom): RoomState {

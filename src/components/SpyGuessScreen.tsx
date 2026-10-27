@@ -29,8 +29,8 @@ export const SpyGuessScreen: React.FC<SpyGuessScreenProps> = ({
   if (!isLocalSpy) {
     return (
       <div className="max-w-md mx-auto p-4 sm:p-6 text-center select-none animate-in fade-in duration-300">
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-3xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center animate-pulse">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-8 space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
             <Target className="w-8 h-8 text-rose-400" />
           </div>
           <span className="text-xs font-bold uppercase tracking-widest text-rose-400">
@@ -51,8 +51,8 @@ export const SpyGuessScreen: React.FC<SpyGuessScreenProps> = ({
 
   return (
     <div className="max-w-xl mx-auto p-4 sm:p-6 select-none animate-in fade-in duration-300">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5 text-center">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
+      <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-5 text-center">
+        <div className="w-14 h-14 mx-auto rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center">
           <ShieldAlert className="w-7 h-7 text-rose-400" />
         </div>
 

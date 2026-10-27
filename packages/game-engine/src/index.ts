@@ -118,9 +118,12 @@ export function assignRoles(
 
   // 4. Modifier selection if enabled
   let selectedModifier: GameModifier | null = null;
-  if (settings.enableModifiers && AVAILABLE_MODIFIERS.length > 0) {
-    const modIdx = cryptoRandomInt(0, AVAILABLE_MODIFIERS.length - 1);
-    selectedModifier = { ...AVAILABLE_MODIFIERS[modIdx], active: true };
+  const allowedModifiers = settings.modifierIds
+    ? AVAILABLE_MODIFIERS.filter((modifier) => settings.modifierIds?.includes(modifier.id))
+    : AVAILABLE_MODIFIERS;
+  if (settings.enableModifiers && allowedModifiers.length > 0) {
+    const modIdx = cryptoRandomInt(0, allowedModifiers.length - 1);
+    selectedModifier = { ...allowedModifiers[modIdx], active: true };
   }
 
   return {

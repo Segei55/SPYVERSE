@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import {
   GameSettings,
+  GameModifier,
   LocationPack,
   Player,
   PlayerSecret,
@@ -27,6 +28,7 @@ import {
 import { OFFICIAL_PACKS } from '../../packages/content/src/index';
 import {
   assignRoles,
+  AVAILABLE_MODIFIERS,
   calculateVoteResults,
   checkSpyGuess,
 } from '../../packages/game-engine/src/index';
@@ -64,14 +66,19 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
     'Агент 4',
   ]);
   const [roundDuration, setRoundDuration] = useState<number>(300); // 5 min
+  const [customDurationMinutes, setCustomDurationMinutes] = useState('5');
   const [spyCount, setSpyCount] = useState<number>(1);
-  const [enableModifiers, setEnableModifiers] = useState<boolean>(true);
+  const [selectedModifierIds, setSelectedModifierIds] = useState<string[]>(
+    () => AVAILABLE_MODIFIERS.map((modifier) => modifier.id)
+  );
+  const [currentModifier, setCurrentModifier] = useState<GameModifier | null>(null);
 
   // Runtime state
   const [currentHandoverIndex, setCurrentHandoverIndex] = useState<number>(0);
   const [secrets, setSecrets] = useState<Record<string, PlayerSecret>>({});
   const [secretLocation, setSecretLocation] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<number>(300);
+  const isTimerHidden = currentModifier?.type === 'radio_static' && timeLeft > 0 && timeLeft <= 30;
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [currentPrompt, setCurrentPrompt] = useState<string>('');
   const [votes, setVotes] = useState<Record<string, string>>({}); // voterId -> targetId
@@ -80,6 +87,10 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
   const [spySearch, setSpySearch] = useState<string>('');
   const [winner, setWinner] = useState<'civilians' | 'spies' | null>(null);
   const [winReasonText, setWinReasonText] = useState<string>('');
+
+  useEffect(() => {
+    setCustomDurationMinutes(roundDuration > 0 ? String(roundDuration / 60) : '');
+  }, [roundDuration]);
 
   // Handle player count change
   const handlePlayerCountChange = (count: number) => {
@@ -128,7 +139,8 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
       roundDurationSeconds: roundDuration,
       spyCount,
       packIds: [pack.id],
-      enableModifiers,
+      modifierIds: selectedModifierIds,
+      enableModifiers: selectedModifierIds.length > 0,
       allowEarlyAccusations: true,
       revoteOnTie: true,
     };
@@ -136,6 +148,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
     const res = assignRoles(players, pack, settings);
     setSecrets(res.secrets);
     setSecretLocation(res.secretLocationName);
+    setCurrentModifier(res.modifier);
 
     let initialTime = roundDuration;
     if (res.modifier?.type === 'time_reduced') {
@@ -236,7 +249,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
     <div className="max-w-4xl mx-auto p-4 sm:p-6 select-none">
       {/* PHASE 1: SETUP */}
       {phase === 'setup' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/30">
@@ -356,6 +369,27 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
                     </button>
                   ))}
                 </div>
+                <label className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+                  Или введите минуты (1–60)
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    step={1}
+                    value={customDurationMinutes}
+                    onChange={(event) => {
+                      setCustomDurationMinutes(event.target.value);
+                    }}
+                    onBlur={() => {
+                      const minutes = Number(customDurationMinutes);
+                      if (Number.isInteger(minutes) && minutes >= 1 && minutes <= 60) {
+                        setRoundDuration(minutes * 60);
+                      }
+                    }}
+                    className="w-16 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-center text-xs text-white"
+                    aria-label="Таймер раунда в минутах"
+                  />
+                </label>
               </div>
 
               {/* Spies count */}
@@ -365,13 +399,15 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
                   <span className="text-rose-400 font-mono text-sm">{spyCount}</span>
                 </label>
                 <div className="flex gap-2">
-                  {[1, 2].map((num) => (
+                  {Array.from(
+                    { length: Math.max(1, Math.floor((playerCount - 1) / 2)) },
+                    (_, index) => index + 1
+                  ).map((num) => (
                     <button
                       key={num}
                       type="button"
-                      disabled={num >= Math.ceil(playerCount / 2)}
                       onClick={() => setSpyCount(num)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-30 ${
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         spyCount === num
                           ? 'bg-rose-500 text-white'
                           : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
@@ -383,25 +419,64 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
                 </div>
               </div>
 
-              {/* Modifiers Toggle */}
-              <div className="pt-2 flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-200 block">Случайные модификаторы</span>
-                  <span className="text-[11px] text-slate-500">Блиц-раунд, шёпот, слепое голосование</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEnableModifiers(!enableModifiers)}
-                  className={`w-12 h-6 rounded-full p-1 transition-colors cursor-pointer ${
-                    enableModifiers ? 'bg-emerald-500' : 'bg-slate-800'
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                      enableModifiers ? 'translate-x-6' : 'translate-x-0'
+              {/* Modifier selection */}
+              <div className="pt-2 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-200">Модификаторы раунда</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={selectedModifierIds.length > 0}
+                    aria-label="Включить модификаторы раунда"
+                    onClick={() =>
+                      setSelectedModifierIds((current) =>
+                        current.length > 0
+                          ? []
+                          : AVAILABLE_MODIFIERS.map((modifier) => modifier.id)
+                      )
+                    }
+                    className={`relative h-5 w-9 rounded-full transition-colors ${
+                      selectedModifierIds.length > 0 ? 'bg-emerald-500' : 'bg-slate-700'
                     }`}
-                  />
-                </button>
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                        selectedModifierIds.length > 0 ? 'left-[18px]' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {AVAILABLE_MODIFIERS.map((modifier) => {
+                    const isSelected = selectedModifierIds.includes(modifier.id);
+                    return (
+                      <label
+                        key={modifier.id}
+                        title={modifier.description}
+                        className={`group relative flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] transition-colors ${
+                          isSelected ? 'bg-amber-500/10 text-amber-200' : 'text-slate-400 hover:bg-slate-800'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedModifierIds((current) =>
+                              current.includes(modifier.id)
+                                ? current.filter((id) => id !== modifier.id)
+                                : [...current, modifier.id]
+                            );
+                          }}
+                          className="accent-amber-400"
+                        />
+                        <span>{modifier.name}</span>
+                        <span className="pointer-events-none absolute bottom-full left-0 z-20 mb-1 hidden w-56 rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] leading-relaxed text-slate-200 shadow-xl group-hover:block group-focus-within:block">
+                          {modifier.description}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
@@ -420,7 +495,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
 
       {/* PHASE 2: HANDOVER SCREEN */}
       {phase === 'handover' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-12 shadow-2xl text-center space-y-6 max-w-lg mx-auto">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-8 sm:p-12 text-center space-y-6 max-w-lg mx-auto">
           <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center shadow-lg shadow-emerald-500/10">
             <EyeOff className="w-10 h-10 text-emerald-400" />
           </div>
@@ -456,7 +531,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
 
       {/* PHASE 3: SECRET REVEALED */}
       {phase === 'revealed' && currentSecret && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-w-xl mx-auto">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6 max-w-xl mx-auto">
           <div className="text-center">
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
               Секретное досье: {playerNames[currentHandoverIndex]}
@@ -533,7 +608,15 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
 
       {/* PHASE 4: DISCUSSION & COUNTDOWN */}
       {phase === 'discussion' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6">
+          {currentModifier && (
+            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/40 p-3.5">
+              <span className="text-xs font-bold uppercase tracking-wide text-amber-300">
+                Модификатор раунда: {currentModifier.name}
+              </span>
+              <p className="mt-1 text-[11px] text-amber-200/80">{currentModifier.description}</p>
+            </div>
+          )}
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
@@ -553,14 +636,16 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
           <div className="p-8 rounded-3xl bg-slate-950 border border-slate-800 text-center space-y-2">
             <div className="flex items-center justify-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest">
               <Clock className="w-4 h-4 text-emerald-400" />
-              <span>Оставшееся время</span>
+              <span>{isTimerHidden ? 'Радиопомехи: таймер скрыт' : 'Оставшееся время'}</span>
             </div>
             <div
               className={`text-6xl sm:text-7xl font-mono font-black tracking-tight ${
-                timeLeft <= 30 ? 'text-rose-400 animate-pulse' : 'text-white'
+                !isTimerHidden && timeLeft <= 30 ? 'text-rose-400' : 'text-white'
               }`}
             >
-              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+              {isTimerHidden
+                ? '??:??'
+                : `${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`}
             </div>
           </div>
 
@@ -612,7 +697,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
 
       {/* PHASE 5: VOTING */}
       {phase === 'voting' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-w-lg mx-auto">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6 max-w-lg mx-auto">
           <div className="text-center">
             <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
               Голосование: {currentVoterIndex + 1} из {playerCount}
@@ -650,7 +735,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
 
       {/* PHASE 6: SPY GUESS */}
       {phase === 'spy_guess' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 max-w-xl mx-auto">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6 max-w-xl mx-auto">
           <div className="text-center">
             <span className="text-xs font-bold uppercase tracking-widest text-rose-400">
               Решающий ход шпиона
@@ -692,7 +777,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
 
       {/* PHASE 7: RESULTS */}
       {phase === 'results' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6 max-w-xl mx-auto">
+        <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-8 text-center space-y-6 max-w-xl mx-auto">
           <div className="w-20 h-20 mx-auto rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
             <Trophy className="w-10 h-10 text-emerald-400" />
           </div>

@@ -27,6 +27,9 @@ jobs:
       - name: Build Web Client
         run: npm run build
 
+      - name: Bundle Dedicated Server
+        run: npm run build:server
+
       - name: Build Desktop Bundle
         run: npm run build -w @spyverse/desktop
 

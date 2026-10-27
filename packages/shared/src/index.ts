@@ -72,6 +72,7 @@ export interface GameSettings {
   roundDurationSeconds: number; // 180, 300, 480, 600, or 0 (unlimited)
   spyCount: number;
   packIds: string[];
+  modifierIds?: string[];
   customPacks?: LocationPack[];
   enableModifiers: boolean;
   allowEarlyAccusations: boolean;
@@ -152,10 +153,16 @@ export const GameSettingsSchema = z.object({
   roundDurationSeconds: z.number().int().min(0).max(3600),
   spyCount: z.number().int().min(1).max(5),
   packIds: z.array(z.string()).min(1, 'Выберите хотя бы один набор'),
+  modifierIds: z.array(z.string().min(1).max(64)).max(20).optional(),
   enableModifiers: z.boolean(),
   allowEarlyAccusations: z.boolean(),
   revoteOnTie: z.boolean(),
   customPacks: z.array(LocationPackSchema).max(50).optional(),
+});
+
+export const SetModifierSelectionSchema = z.object({
+  modifierId: z.string().min(1).max(64),
+  isSelected: z.boolean(),
 });
 
 export const CreateRoomPayloadSchema = z.object({
