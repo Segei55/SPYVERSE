@@ -1,5 +1,10 @@
 {
   "name": "spyverse",
+  "description": "SPYVERSE — многоплатформенная шпионская игра для компании друзей",
+  "author": {
+    "name": "SPYVERSE",
+    "email": "spyverse@example.com"
+  },
   "private": true,
   "version": "1.0.0",
   "type": "module",
