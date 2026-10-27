@@ -147,13 +147,21 @@ npx electron-builder --config apps/desktop/electron-builder.json --linux
 - `spyverse_1.0.0_amd64.deb`
 
 ### Сборка Android APK
+Android-версия является клиентом: серверную комнату запускает игрок на ПК, а телефон подключается к его адресу по LAN или VPN. Android-приложение запросит доступ к микрофону при первом включении голосового чата, а доступ к файлам — при импорте или экспорте пользовательского набора.
+
+Чтобы скачать готовый APK:
+1. Откройте вкладку **Actions** репозитория и выберите workflow **Build Android APK**.
+2. Запустите его вручную через **Run workflow** либо дождитесь автоматической сборки после push в `main`/`master` или публикации тега `v*`.
+3. Скачайте артефакт `spyverse-android-apk` у завершённого запуска.
+
+Проект Android создаётся внутри workflow и не хранится в Git. Для локальной сборки:
 ```bash
 npm run build
-npx cap sync android
-cd android && ./gradlew assembleDebug
+npm run add -w @spyverse/mobile
+npm run sync -w @spyverse/mobile
+cd apps/mobile/android && ./gradlew assembleDebug
 ```
-Готовый файл создаётся по пути:
-`android/app/build/outputs/apk/debug/app-debug.apk`.
+Готовый файл создаётся по пути `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ### Сборка Standalone Сервера (для хостинга на ПК без Vite)
 ```bash

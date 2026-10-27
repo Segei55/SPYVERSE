@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import {
   X,
   Plus,
@@ -43,6 +44,12 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
   const [editingPack, setEditingPack] = useState<LocationPack | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
+  const [fileAccessGranted, setFileAccessGranted] = useState(false);
+  const [fileAccessRequest, setFileAccessRequest] = useState<
+    { type: 'import' } | { type: 'export'; pack: LocationPack } | null
+  >(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
   if (!isOpen) return null;
 
@@ -51,9 +58,26 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const handleExport = (pack: LocationPack) => {
+  const saveExportedPack = async (pack: LocationPack) => {
     sound.playClick();
     const jsonStr = exportPackToJSON(pack);
+    if (isAndroidNative) {
+      try {
+        const { Directory, Encoding, Filesystem } = await import('@capacitor/filesystem');
+        await Filesystem.writeFile({
+          path: `SPYVERSE/spyverse_pack_${pack.id}.json`,
+          data: jsonStr,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+          recursive: true,
+        });
+        showNotice(`Набор «${pack.name}» сохранён в Documents/SPYVERSE.`);
+      } catch (error) {
+        showNotice(`Не удалось сохранить файл: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      return;
+    }
+
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -62,6 +86,45 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
     link.click();
     URL.revokeObjectURL(url);
     showNotice(`Набор «${pack.name}» успешно экспортирован!`);
+  };
+
+  const requestFileAccess = async () => {
+    try {
+      const { Filesystem } = await import('@capacitor/filesystem');
+      const permission = await Filesystem.requestPermissions();
+      if (permission.publicStorage !== 'granted') {
+        throw new Error('Доступ к файлам не разрешён. Его можно включить в настройках Android.');
+      }
+
+      setFileAccessGranted(true);
+      const request = fileAccessRequest;
+      setFileAccessRequest(null);
+      if (request?.type === 'export') {
+        await saveExportedPack(request.pack);
+      } else {
+        showNotice('Доступ разрешён. Нажмите «Импорт JSON» ещё раз, чтобы выбрать файл.');
+      }
+    } catch (error) {
+      setFileAccessRequest(null);
+      showNotice(`Не удалось получить доступ к файлам: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const handleImportClick = () => {
+    sound.playClick();
+    if (isAndroidNative && !fileAccessGranted) {
+      setFileAccessRequest({ type: 'import' });
+      return;
+    }
+    importInputRef.current?.click();
+  };
+
+  const handleExport = (pack: LocationPack) => {
+    if (isAndroidNative && !fileAccessGranted) {
+      setFileAccessRequest({ type: 'export', pack });
+      return;
+    }
+    void saveExportedPack(pack);
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,9 +149,10 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
         showNotice(`Набор «${importedPack.name}» успешно импортирован!`);
       } else {
         sound.playAlarm();
-        alert(`Ошибка валидации набора:\n${res.errors?.join('\n')}`);
+        showNotice(`Ошибка валидации набора: ${res.errors?.join(', ')}`);
       }
     };
+    reader.onerror = () => showNotice('Не удалось прочитать выбранный JSON-файл.');
     reader.readAsText(file);
     e.target.value = '';
   };
@@ -191,11 +255,11 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+    <div className="safe-area-modal fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl w-full max-w-5xl h-[90vh] max-h-[calc(100dvh-1rem)] flex flex-col overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-          <div className="flex items-center gap-3">
+        <div className="p-3 sm:p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-950/60">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
               <FolderOpen className="w-5 h-5 text-emerald-400" />
             </div>
@@ -212,12 +276,15 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all cursor-pointer">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={handleImportClick}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all cursor-pointer"
+            >
               <Upload className="w-3.5 h-3.5 text-cyan-400" />
               <span>Импорт JSON</span>
-              <input type="file" accept=".json" onChange={handleImportFile} className="hidden" />
-            </label>
+            </button>
+            <input ref={importInputRef} type="file" accept=".json,application/json" onChange={handleImportFile} className="hidden" />
 
             <button
               onClick={handleStartCreate}
@@ -243,6 +310,34 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
         {notification && (
           <div className="bg-emerald-950 border-b border-emerald-500/40 text-emerald-300 text-xs py-2 px-4 flex items-center justify-between">
             <span>{notification}</span>
+          </div>
+        )}
+
+        {fileAccessRequest && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
+            <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+              <h3 className="text-base font-bold text-white">Доступ к файлам</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                SPYVERSE использует доступ только для {fileAccessRequest.type === 'import'
+                  ? 'чтения выбранного вами JSON-набора.'
+                  : 'сохранения экспортируемого набора в Documents/SPYVERSE.'}
+                {' '}Импортируемый файл выбирается вами через системное окно Android.
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  onClick={() => setFileAccessRequest(null)}
+                  className="rounded-xl border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={() => void requestFileAccess()}
+                  className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-bold text-slate-950 hover:bg-emerald-400"
+                >
+                  Разрешить доступ
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

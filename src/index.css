@@ -70,6 +70,9 @@ body {
 }
 
 .case-app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
   position: relative;
   isolation: isolate;
   background-color: #12130f;
@@ -78,6 +81,36 @@ body {
     linear-gradient(135deg, rgba(40, 41, 33, 0.28), transparent 42%),
     repeating-linear-gradient(0deg, rgba(228, 219, 180, 0.014) 0, rgba(228, 219, 180, 0.014) 1px, transparent 1px, transparent 38px),
     repeating-linear-gradient(90deg, rgba(228, 219, 180, 0.012) 0, rgba(228, 219, 180, 0.012) 1px, transparent 1px, transparent 38px);
+}
+
+.mobile-navbar {
+  height: auto;
+  min-height: calc(4rem + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-left: max(0.75rem, env(safe-area-inset-left));
+  padding-right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.safe-area-modal {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+.safe-area-modal > :not(.fixed) {
+  max-height: calc(100dvh - max(2rem, env(safe-area-inset-top) + env(safe-area-inset-bottom) + 1rem));
+}
+
+.mobile-navbar > div:first-child {
+  min-width: 0;
+}
+
+@media (max-width: 360px) {
+  .mobile-navbar > div:first-child > div:last-child > span:first-child {
+    font-size: 0.9rem;
+    letter-spacing: 0.12em;
+  }
 }
 
 .case-app::before {

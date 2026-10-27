@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Settings, Server, Shield, HelpCircle } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Server, Shield, FolderOpen } from 'lucide-react';
 import { sound } from '../utils/sound';
 
 interface NavbarProps {
@@ -27,7 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="h-16 border-b border-slate-700/80 bg-slate-950/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 select-none">
+    <header className="mobile-navbar h-16 border-b border-slate-700/80 bg-slate-950/90 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between sticky top-0 z-40 select-none">
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg bg-emerald-950 border border-emerald-400/40 flex items-center justify-center">
           <Shield className="w-4 h-4 text-emerald-300 font-bold" />
@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Connection status badge */}
         <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs">
           <span
@@ -61,10 +61,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             sound.playClick();
             onOpenPacks();
           }}
-          className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+          className="px-2 sm:px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
           title="Библиотека и редактор наборов"
         >
-          <span className="text-emerald-400 font-bold">19</span> Наборов
+          <FolderOpen className="h-4 w-4 text-emerald-400 sm:hidden" />
+          <span className="hidden sm:inline"><span className="text-emerald-400 font-bold">19</span> Наборов</span>
         </button>
 
         {/* Server & LAN guide */}

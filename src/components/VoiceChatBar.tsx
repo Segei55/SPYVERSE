@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Mic, MicOff, Radio, ShieldAlert } from 'lucide-react';
 import { voiceManager } from '../utils/webrtc';
 import { sound } from '../utils/sound';
@@ -10,17 +11,21 @@ interface VoiceChatBarProps {
 }
 
 export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayerId }) => {
+  const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
   const [isMuted, setIsMuted] = useState(voiceManager.getIsMuted());
   const [isPtt, setIsPtt] = useState(voiceManager.getIsPushToTalk());
   const [isPttPressed, setIsPttPressed] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [isMicReady, setIsMicReady] = useState(false);
+  const [isRequestingMic, setIsRequestingMic] = useState(false);
 
-  // Микрофон запускаем один раз при монтировании: раньше каждое нажатие PTT его останавливало
   useEffect(() => {
+    if (isAndroidNative) return () => voiceManager.stopMicrophone();
     let isMounted = true;
 
     voiceManager.startMicrophone().then((success) => {
       if (isMounted) {
+        setIsMicReady(success);
         if (!success) {
           setMicError('Микрофон не подключён или доступ заблокирован браузером.');
         }
@@ -31,7 +36,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
       isMounted = false;
       voiceManager.stopMicrophone();
     };
-  }, []);
+  }, [isAndroidNative]);
 
   useEffect(() => {
     // Global keyboard listener for Push-to-Talk (Spacebar)
@@ -70,6 +75,18 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
     voiceManager.setMuted(next);
   };
 
+  const requestMicrophoneAccess = async () => {
+    sound.playClick();
+    setMicError(null);
+    setIsRequestingMic(true);
+    const success = await voiceManager.startMicrophone();
+    setIsRequestingMic(false);
+    setIsMicReady(success);
+    if (!success) {
+      setMicError('Доступ к микрофону не предоставлен. Разрешите его в настройках Android и попробуйте снова.');
+    }
+  };
+
   const togglePtt = () => {
     sound.playClick();
     const next = !isPtt;
@@ -81,20 +98,31 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 backdrop-blur-md shadow-xl flex flex-wrap items-center justify-between gap-3">
       {/* Controls */}
       <div className="flex items-center gap-2">
-        <button
-          onClick={toggleMute}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            isMuted
-              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20'
-              : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/25 shadow-lg shadow-emerald-500/10'
-          }`}
-          aria-label={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
-        >
-          {isMuted ? <MicOff className="w-4 h-4 text-rose-400" /> : <Mic className="w-4 h-4 text-emerald-400" />}
-          <span>{isMuted ? 'Микрофон выкл' : 'Микрофон вкл'}</span>
-        </button>
+        {isAndroidNative && !isMicReady ? (
+          <button
+            onClick={() => void requestMicrophoneAccess()}
+            disabled={isRequestingMic}
+            className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Mic className="h-4 w-4" />
+            <span>{isRequestingMic ? 'Запрос доступа...' : 'Разрешить микрофон'}</span>
+          </button>
+        ) : (
+          <button
+            onClick={toggleMute}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              isMuted
+                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20'
+                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/25 shadow-lg shadow-emerald-500/10'
+            }`}
+            aria-label={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
+          >
+            {isMuted ? <MicOff className="w-4 h-4 text-rose-400" /> : <Mic className="w-4 h-4 text-emerald-400" />}
+            <span>{isMuted ? 'Микрофон выкл' : 'Микрофон вкл'}</span>
+          </button>
+        )}
 
-        <button
+        {isMicReady && <button
           onClick={togglePtt}
           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
             isPtt
@@ -106,9 +134,9 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
         >
           <Radio className="w-3.5 h-3.5" />
           <span>PTT {isPtt ? '(Пробел)' : 'Выкл'}</span>
-        </button>
+        </button>}
 
-        {isPtt && (
+        {isPtt && isMicReady && (
           <button
             onMouseDown={() => {
               setIsPttPressed(true);

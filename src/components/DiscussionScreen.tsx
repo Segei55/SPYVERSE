@@ -226,7 +226,7 @@ export const DiscussionScreen: React.FC<DiscussionScreenProps> = ({
 
       {/* Accusation Suspect Selection Modal */}
       {isAccusingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="safe-area-modal fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl">
             <div className="text-center">
               <h3 className="text-lg font-black text-white">Выдвижение обвинения</h3>
