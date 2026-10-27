@@ -1,0 +1,17 @@
+{
+  "name": "@spyverse/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "add": "cap add android",
+    "sync": "cap sync android",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
+  }
+}

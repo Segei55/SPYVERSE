@@ -1,0 +1,6 @@
+{
+  "name": "SPYVERSE",
+  "description": "Многоплатформенная шпионская социальная игра для друзей с сетевым мультиплеером, голосовой связью WebRTC, офлайн-режимом, редактором наборов и сервером.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

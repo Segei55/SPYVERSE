@@ -1,0 +1,73 @@
+name: Build Desktop Applications
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    name: Build Windows (NSIS Installer & Portable)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Client
+        run: npm run build
+
+      - name: Build Desktop Bundle
+        run: npm run build -w @spyverse/desktop
+
+      - name: Build Windows Application
+        run: npx electron-builder --config apps/desktop/electron-builder.json --win
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: spyverse-windows
+          path: dist-electron/*.exe
+
+  build-linux:
+    name: Build Linux (AppImage & DEB)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Client
+        run: npm run build
+
+      - name: Build Desktop Bundle
+        run: npm run build -w @spyverse/desktop
+
+      - name: Build Linux Application
+        run: npx electron-builder --config apps/desktop/electron-builder.json --linux
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: spyverse-linux
+          path: |
+            dist-electron/*.AppImage
+            dist-electron/*.deb
