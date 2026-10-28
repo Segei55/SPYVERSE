@@ -27,7 +27,11 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
       if (isMounted) {
         setIsMicReady(success);
         if (!success) {
-          setMicError('Микрофон не подключён или доступ заблокирован браузером.');
+          setMicError(
+            !navigator.mediaDevices?.getUserMedia || !window.isSecureContext
+              ? 'Для микрофона нужен защищённый адрес (HTTPS или localhost).'
+              : 'Микрофон не подключён или доступ заблокирован браузером.'
+          );
         }
       }
     });
@@ -83,7 +87,13 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
     setIsRequestingMic(false);
     setIsMicReady(success);
     if (!success) {
-      setMicError('Доступ к микрофону не предоставлен. Разрешите его в настройках Android и попробуйте снова.');
+      setMicError(
+        !navigator.mediaDevices?.getUserMedia || !window.isSecureContext
+          ? 'Для микрофона нужен защищённый адрес (HTTPS или localhost).'
+          : isAndroidNative
+            ? 'Разрешите доступ к микрофону в настройках Android и попробуйте снова.'
+            : 'Разрешите браузеру доступ к микрофону и попробуйте снова.'
+      );
     }
   };
 
@@ -98,14 +108,16 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 backdrop-blur-md shadow-xl flex flex-wrap items-center justify-between gap-3">
       {/* Controls */}
       <div className="flex items-center gap-2">
-        {isAndroidNative && !isMicReady ? (
+        {!isMicReady ? (
           <button
             onClick={() => void requestMicrophoneAccess()}
             disabled={isRequestingMic}
             className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:cursor-wait disabled:opacity-60"
           >
             <Mic className="h-4 w-4" />
-            <span>{isRequestingMic ? 'Запрос доступа...' : 'Разрешить микрофон'}</span>
+            <span>
+              {isRequestingMic ? 'Запрос доступа...' : isAndroidNative ? 'Разрешить микрофон' : 'Подключить микрофон'}
+            </span>
           </button>
         ) : (
           <button

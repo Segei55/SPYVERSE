@@ -1,5 +1,5 @@
 import React from 'react';
-import { Vote, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Vote, CheckCircle2, MessageSquare } from 'lucide-react';
 import { GameState, Player } from '../../packages/shared/src/index';
 import { sound } from '../utils/sound';
 
@@ -8,6 +8,8 @@ interface VotingScreenProps {
   players: Player[];
   localPlayer: Player;
   onCastVote: (targetId: string) => void;
+  onOpenChat: () => void;
+  unreadChatCount?: number;
 }
 
 export const VotingScreen: React.FC<VotingScreenProps> = ({
@@ -15,6 +17,8 @@ export const VotingScreen: React.FC<VotingScreenProps> = ({
   players,
   localPlayer,
   onCastVote,
+  onOpenChat,
+  unreadChatCount = 0,
 }) => {
   const isBlindVote = gameState.currentModifier?.type === 'blind_vote';
   const myVoteTargetId = localPlayer.voteTargetId;
@@ -35,7 +39,20 @@ export const VotingScreen: React.FC<VotingScreenProps> = ({
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4 sm:p-6 space-y-6 select-none animate-in fade-in duration-300">
+    <div className="max-w-xl mx-auto p-4 sm:p-6 space-y-4 select-none animate-in fade-in duration-300">
+      <button
+        onClick={() => {
+          sound.playClick();
+          onOpenChat();
+        }}
+        className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-700 relative"
+      >
+        <MessageSquare className="w-4 h-4 text-emerald-400" />
+        <span>Чат комнаты</span>
+        {unreadChatCount > 0 && (
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping absolute top-2 right-3" />
+        )}
+      </button>
       <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6 text-center">
         {/* Header */}
         <div className="space-y-1">

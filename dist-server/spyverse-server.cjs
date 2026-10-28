@@ -62590,8 +62590,10 @@ function assignRoles(players, pack, settings) {
   if (!pack.locations || pack.locations.length === 0) {
     throw new Error("\u0418\u0433\u0440\u043E\u0432\u043E\u0439 \u043D\u0430\u0431\u043E\u0440 \u043D\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u043B\u043E\u043A\u0430\u0446\u0438\u0439.");
   }
-  const locIndex = cryptoRandomInt(0, pack.locations.length - 1);
-  const secretLocation = pack.locations[locIndex];
+  const secretLocation = pack.locations[cryptoRandomInt(0, pack.locations.length - 1)];
+  if (!secretLocation?.roles || secretLocation.roles.length === 0) {
+    throw new Error(`\u041B\u043E\u043A\u0430\u0446\u0438\u044F \xAB${secretLocation?.name ?? "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E"}\xBB \u043D\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0440\u043E\u043B\u0435\u0439.`);
+  }
   const allLocationNames = pack.locations.map((l) => l.name);
   const shuffledPlayerIndices = secureShuffle(players.map((_, i) => i));
   const spyIndices = new Set(shuffledPlayerIndices.slice(0, settings.spyCount));
@@ -62636,11 +62638,13 @@ function assignRoles(players, pack, settings) {
   };
 }
 function calculateVoteResults(players, revoteCount, revoteOnTie) {
+  const validPlayerIds = new Set(players.map((player) => player.id));
   const voteCounts = {};
   let totalVotes = 0;
   for (const player of players) {
-    if (player.voteTargetId) {
-      voteCounts[player.voteTargetId] = (voteCounts[player.voteTargetId] || 0) + 1;
+    const voteTargetId = player.voteTargetId;
+    if (typeof voteTargetId === "string" && voteTargetId.trim() && validPlayerIds.has(voteTargetId)) {
+      voteCounts[voteTargetId] = (voteCounts[voteTargetId] || 0) + 1;
       totalVotes++;
     }
   }
@@ -62668,8 +62672,10 @@ function calculateVoteResults(players, revoteCount, revoteOnTie) {
   };
 }
 function checkSpyGuess(guess, actualLocation) {
-  if (!guess || !actualLocation) return false;
-  const normalize = (s) => s.toLowerCase().replace(/[\s\-_—«»"']/g, "").trim();
+  if (typeof guess !== "string" || typeof actualLocation !== "string" || !guess.trim() || !actualLocation.trim()) {
+    return false;
+  }
+  const normalize = (value) => value.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{S}\s]/gu, "").trim();
   return normalize(guess) === normalize(actualLocation);
 }
 function createInitialGameState(settings, modifier) {

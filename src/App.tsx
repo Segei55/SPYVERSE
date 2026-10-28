@@ -424,6 +424,8 @@ export function App() {
                 players={roomState.players}
                 localPlayer={localPlayer}
                 onCastVote={handleCastVote}
+                onOpenChat={handleOpenChat}
+                unreadChatCount={unreadChatCount}
               />
             )}
 

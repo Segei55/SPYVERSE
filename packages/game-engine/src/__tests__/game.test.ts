@@ -186,5 +186,23 @@ test('checkSpyGuess correctly matches with punctuation/whitespace normalization'
   assert.ok(checkSpyGuess('космическая  станция', 'Космическая станция'));
   assert.ok(checkSpyGuess('«Космическая станция»', 'Космическая станция'));
   assert.ok(checkSpyGuess('Подводная-лодка', 'Подводная лодка'));
+  assert.ok(checkSpyGuess('Космическая, станция!', 'Космическая станция'));
+  assert.ok(checkSpyGuess('   (Космическая станция)? ', 'Космическая станция'));
   assert.ok(!checkSpyGuess('Больница', 'Подводная лодка'));
+});
+
+test('calculateVoteResults ignores empty and invalid vote targets', () => {
+  const players = createMockPlayers(4);
+  players[0].voteTargetId = 'player_3';
+  players[1].voteTargetId = '';
+  players[2].voteTargetId = 'missing_player';
+  players[3].voteTargetId = 'player_3';
+
+  const result = calculateVoteResults(players, 0, true);
+  assert.equal(result.outcome, 'player_eliminated');
+  if (result.outcome === 'player_eliminated') {
+    assert.equal(result.accusedPlayerId, 'player_3');
+    assert.equal(result.voteCount, 2);
+    assert.equal(result.totalVotes, 2);
+  }
 });

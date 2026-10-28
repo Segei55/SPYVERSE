@@ -11,7 +11,45 @@ import {
   VoiceSignalPayloadSchema,
 } from '../../../packages/shared/src/index';
 
+const DEFAULT_VOICE_ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+];
+
+function isIceServer(value: unknown): value is RTCIceServer {
+  if (!value || typeof value !== 'object') return false;
+  const server = value as Record<string, unknown>;
+  const hasUrls =
+    (typeof server.urls === 'string' && server.urls.length > 0) ||
+    (Array.isArray(server.urls) &&
+      server.urls.length > 0 &&
+      server.urls.every((url) => typeof url === 'string' && url.length > 0));
+  return (
+    hasUrls &&
+    (server.username === undefined || typeof server.username === 'string') &&
+    (server.credential === undefined || typeof server.credential === 'string')
+  );
+}
+
+function getVoiceIceServers(): RTCIceServer[] {
+  const configured = process.env.WEBRTC_ICE_SERVERS;
+  if (!configured) return DEFAULT_VOICE_ICE_SERVERS;
+
+  try {
+    const parsed: unknown = JSON.parse(configured);
+    if (!Array.isArray(parsed) || !parsed.every(isIceServer)) {
+      throw new Error('Expected a JSON array of ICE server objects with valid urls.');
+    }
+    return [...DEFAULT_VOICE_ICE_SERVERS, ...parsed];
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`[Voice] Invalid WEBRTC_ICE_SERVERS configuration: ${message}`);
+  }
+}
+
 export function setupSocketHandlers(io: SocketIOServer, roomManager: RoomManager): void {
+  const voiceIceServers = getVoiceIceServers();
+
   io.on('connection', (socket: Socket) => {
     // 1. Create Room
     socket.on('room_create', (payload: unknown) => {
@@ -25,6 +63,7 @@ export function setupSocketHandlers(io: SocketIOServer, roomManager: RoomManager
       }
       const { hostName, avatar, settings } = parsed.data;
       const result = roomManager.createRoom(socket, hostName, avatar, settings);
+      socket.emit('voice_ice_servers', voiceIceServers);
       socket.emit('room_created', result);
     });
 
@@ -46,6 +85,7 @@ export function setupSocketHandlers(io: SocketIOServer, roomManager: RoomManager
           message: result.error || 'Не удалось подключиться к комнате.',
         });
       } else {
+        socket.emit('voice_ice_servers', voiceIceServers);
         socket.emit('room_joined', {
           roomId,
           sessionToken: result.sessionToken,

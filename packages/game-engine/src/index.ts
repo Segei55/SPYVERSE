@@ -72,9 +72,10 @@ export function assignRoles(
     throw new Error('Игровой набор не содержит локаций.');
   }
 
-  // 1. Pick a random secret location
-  const locIndex = cryptoRandomInt(0, pack.locations.length - 1);
-  const secretLocation = pack.locations[locIndex];
+  const secretLocation = pack.locations[cryptoRandomInt(0, pack.locations.length - 1)];
+  if (!secretLocation?.roles || secretLocation.roles.length === 0) {
+    throw new Error(`Локация «${secretLocation?.name ?? 'Неизвестно'}» не содержит ролей.`);
+  }
   const allLocationNames = pack.locations.map((l) => l.name);
 
   // 2. Shuffle players to select spies
@@ -147,12 +148,14 @@ export function calculateVoteResults(
   revoteCount: number,
   revoteOnTie: boolean
 ): VoteOutcome {
+  const validPlayerIds = new Set(players.map((player) => player.id));
   const voteCounts: Record<string, number> = {};
   let totalVotes = 0;
 
   for (const player of players) {
-    if (player.voteTargetId) {
-      voteCounts[player.voteTargetId] = (voteCounts[player.voteTargetId] || 0) + 1;
+    const voteTargetId = player.voteTargetId;
+    if (typeof voteTargetId === 'string' && voteTargetId.trim() && validPlayerIds.has(voteTargetId)) {
+      voteCounts[voteTargetId] = (voteCounts[voteTargetId] || 0) + 1;
       totalVotes++;
     }
   }
@@ -189,12 +192,17 @@ export function calculateVoteResults(
  * Check if the spy correctly guessed the secret location
  */
 export function checkSpyGuess(guess: string, actualLocation: string): boolean {
-  if (!guess || !actualLocation) return false;
-  const normalize = (s: string) =>
-    s
+  if (typeof guess !== 'string' || typeof actualLocation !== 'string' || !guess.trim() || !actualLocation.trim()) {
+    return false;
+  }
+
+  const normalize = (value: string): string =>
+    value
+      .normalize('NFKC')
       .toLowerCase()
-      .replace(/[\s\-_—«»"']/g, '')
+      .replace(/[\p{P}\p{S}\s]/gu, '')
       .trim();
+
   return normalize(guess) === normalize(actualLocation);
 }
 
