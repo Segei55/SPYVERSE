@@ -27,6 +27,8 @@ export class WebRTCVoiceManager {
   private negotiatingPeers: Set<string> = new Set();
   private signalQueues: Map<string, Promise<void>> = new Map();
   private remoteAudioElements: Map<string, HTMLAudioElement> = new Map();
+  private iceRestartTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private iceRestartAttempts: Map<string, number> = new Map();
   private microphoneStartPromise: Promise<boolean> | null = null;
   private microphoneRequestId = 0;
   private audioContext: AudioContext | null = null;
@@ -215,6 +217,11 @@ export class WebRTCVoiceManager {
     this.pendingNegotiations.clear();
     this.negotiatingPeers.clear();
     this.signalQueues.clear();
+    for (const timer of this.iceRestartTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.iceRestartTimers.clear();
+    this.iceRestartAttempts.clear();
     for (const audio of this.remoteAudioElements.values()) {
       audio.pause();
       audio.srcObject = null;
@@ -461,7 +468,66 @@ export class WebRTCVoiceManager {
       });
     };
 
+    pc.onconnectionstatechange = () => {
+      if (this.peerConnections.get(peerId) !== pc) return;
+      if (pc.connectionState === 'connected') {
+        this.clearIceRestart(peerId);
+      } else if (pc.connectionState === 'failed') {
+        this.scheduleIceRestart(peerId, pc, 500);
+      } else if (pc.connectionState === 'disconnected') {
+        this.scheduleIceRestart(peerId, pc, 3000);
+      }
+    };
+
     return pc;
+  }
+
+  public unlockRemoteAudio(): void {
+    for (const [peerId, audio] of this.remoteAudioElements) {
+      if (audio.paused && audio.srcObject) {
+        void audio.play().catch((error: unknown) => {
+          console.warn(`[WebRTC] Could not resume remote audio from ${peerId}:`, error);
+        });
+      }
+    }
+  }
+
+  private scheduleIceRestart(peerId: string, pc: RTCPeerConnection, delay: number): void {
+    if (!this.localPeerId || this.localPeerId > peerId || this.iceRestartTimers.has(peerId)) return;
+    const timer = setTimeout(() => {
+      this.iceRestartTimers.delete(peerId);
+      if (
+        this.peerConnections.get(peerId) !== pc ||
+        (pc.connectionState !== 'failed' && pc.connectionState !== 'disconnected')
+      ) {
+        return;
+      }
+      const attempts = this.iceRestartAttempts.get(peerId) ?? 0;
+      if (attempts >= 5) {
+        console.warn(`[WebRTC] Could not restore connection with ${peerId} after ${attempts} ICE restarts.`);
+        return;
+      }
+      this.iceRestartAttempts.set(peerId, attempts + 1);
+      try {
+        pc.restartIce();
+        this.pendingNegotiations.add(peerId);
+        void this.createPendingOffer(peerId).catch((error) => {
+          console.warn(`[WebRTC] ICE restart negotiation failed for ${peerId}:`, error);
+          this.scheduleIceRestart(peerId, pc, Math.min(15000, 1000 * 2 ** attempts));
+        });
+      } catch (error) {
+        console.warn(`[WebRTC] ICE restart failed for ${peerId}:`, error);
+        this.scheduleIceRestart(peerId, pc, Math.min(15000, 1000 * 2 ** attempts));
+      }
+    }, delay);
+    this.iceRestartTimers.set(peerId, timer);
+  }
+
+  private clearIceRestart(peerId: string): void {
+    const timer = this.iceRestartTimers.get(peerId);
+    if (timer !== undefined) clearTimeout(timer);
+    this.iceRestartTimers.delete(peerId);
+    this.iceRestartAttempts.delete(peerId);
   }
 
   private async handleIncomingSignal(senderPeerId: string, signalData: VoiceSignalData): Promise<void> {
@@ -609,6 +675,7 @@ export class WebRTCVoiceManager {
     this.pendingCandidates.delete(peerId);
     this.pendingNegotiations.delete(peerId);
     this.negotiatingPeers.delete(peerId);
+    this.clearIceRestart(peerId);
     const audio = this.remoteAudioElements.get(peerId);
     if (audio) {
       audio.pause();

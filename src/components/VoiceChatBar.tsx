@@ -74,6 +74,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
 
   const toggleMute = () => {
     sound.playClick();
+    voiceManager.unlockRemoteAudio();
     const next = !isMuted;
     setIsMuted(next);
     voiceManager.setMuted(next);
@@ -81,6 +82,7 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
 
   const requestMicrophoneAccess = async () => {
     sound.playClick();
+    voiceManager.unlockRemoteAudio();
     setMicError(null);
     setIsRequestingMic(true);
     const success = await voiceManager.startMicrophone();
