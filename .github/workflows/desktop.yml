@@ -43,17 +43,22 @@ jobs:
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          $installer = "dist-electron\SPYVERSE.Setup.$version.exe"
-          $portable = "dist-electron\SPYVERSE.$version.exe"
-          if (-not (Test-Path $installer)) {
-            throw "Windows installer was not found: $installer"
+          $installerPattern = "^SPYVERSE Setup $([regex]::Escape($version))\.exe$"
+          $portablePattern = "^SPYVERSE $([regex]::Escape($version))\.exe$"
+          $installer = Get-ChildItem -LiteralPath "dist-electron" -File |
+            Where-Object { $_.Name -match $installerPattern } |
+            Select-Object -First 1
+          $portable = Get-ChildItem -LiteralPath "dist-electron" -File |
+            Where-Object { $_.Name -match $portablePattern } |
+            Select-Object -First 1
+          if (-not $installer) {
+            throw "Windows installer matching '$installerPattern' was not found."
           }
-          if (-not (Test-Path $portable)) {
-            throw "Windows portable build was not found: $portable"
+          if (-not $portable) {
+            throw "Windows portable build matching '$portablePattern' was not found."
           }
-          Move-Item $installer "dist-electron\SPYVERSE-Setup-$version.exe"
+          Move-Item $installer.FullName "dist-electron\SPYVERSE-Setup-$version.exe"
           Copy-Item "dist-electron\SPYVERSE-Setup-$version.exe" "dist-electron\SPYVERSE Setup $version.exe"
-          Move-Item $portable "dist-electron\SPYVERSE $version.exe"
 
       - name: Upload Windows Release Assets
         uses: actions/upload-artifact@v4
