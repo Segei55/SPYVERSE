@@ -58,7 +58,7 @@ jobs:
             throw "Windows portable build matching '$portablePattern' was not found."
           }
           Move-Item $installer.FullName "dist-electron\SPYVERSE-Setup-$version.exe"
-          Copy-Item "dist-electron\SPYVERSE-Setup-$version.exe" "dist-electron\SPYVERSE Setup $version.exe"
+          Move-Item $portable.FullName "dist-electron\SPYVERSE-$version.exe"
 
       - name: Upload Windows Release Assets
         uses: actions/upload-artifact@v4
@@ -199,6 +199,16 @@ jobs:
             echo "Release tag $RELEASE_TAG does not match package version $PACKAGE_VERSION"
             exit 1
           fi
+          cp "release-assets/SPYVERSE-Setup-${VERSION}.exe" "release-assets/SPYVERSE Setup ${VERSION}.exe"
+          cp "release-assets/SPYVERSE-${VERSION}.exe" "release-assets/SPYVERSE ${VERSION}.exe"
+          test -f "release-assets/SPYVERSE Setup ${VERSION}.exe"
+          test -f "release-assets/SPYVERSE ${VERSION}.exe"
+          printf 'Publishing Windows compatibility assets:\n'
+          printf ' - %s\n' "SPYVERSE Setup ${VERSION}.exe" "SPYVERSE ${VERSION}.exe"
           gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
             gh release create "$RELEASE_TAG" --title "SPYVERSE $VERSION" --generate-notes
-          gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          mapfile -d '' RELEASE_ASSETS < <(find release-assets -maxdepth 1 -type f -print0)
+          gh release upload "$RELEASE_TAG" "${RELEASE_ASSETS[@]}" --clobber
+          RELEASE_ASSET_NAMES="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
+          grep -Fqx "SPYVERSE Setup ${VERSION}.exe" <<< "$RELEASE_ASSET_NAMES"
+          grep -Fqx "SPYVERSE ${VERSION}.exe" <<< "$RELEASE_ASSET_NAMES"
