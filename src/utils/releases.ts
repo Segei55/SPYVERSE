@@ -97,17 +97,25 @@ export function isNewerVersion(candidate: string, current: string): boolean {
 }
 
 export function getReleaseDownloads(release: LatestRelease) {
-  const getAsset = (pattern: RegExp) => release.assets.find((asset) => pattern.test(asset.name))?.url;
+  const getAsset = (matches: (name: string) => boolean) =>
+    release.assets.find((asset) => matches(asset.name))?.url;
+  const windowsExecutables = release.assets.filter(
+    (asset) => /^SPYVERSE(?=[ ._-\d]|$)/i.test(asset.name) && /\.exe$/i.test(asset.name)
+  );
+  const normalizeWindowsName = (name: string) =>
+    name.replace(/\.exe$/i, '').replace(/[._-]+/g, ' ').trim().toLowerCase();
+  const isWindowsInstaller = (name: string) =>
+    /^spyverse\s+setup(?:\s|$)/.test(normalizeWindowsName(name));
 
   return {
     windows: {
-      installer: getAsset(/^SPYVERSE[ ._-]*Setup[ ._-]*.+\.exe$/i),
-      portable: getAsset(/^SPYVERSE(?![ ._-]*Setup(?:[ ._-]|$))[ ._-]*.+\.exe$/i),
+      installer: windowsExecutables.find((asset) => isWindowsInstaller(asset.name))?.url,
+      portable: windowsExecutables.find((asset) => !isWindowsInstaller(asset.name))?.url,
     },
     linux: {
-      appImage: getAsset(/\.AppImage$/i),
-      deb: getAsset(/\.deb$/i),
+      appImage: getAsset((name) => /\.AppImage$/i.test(name)),
+      deb: getAsset((name) => /\.deb$/i.test(name)),
     },
-    android: getAsset(/\.apk$/i),
+    android: getAsset((name) => /\.apk$/i.test(name)),
   };
 }

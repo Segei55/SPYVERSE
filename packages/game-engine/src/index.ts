@@ -125,6 +125,34 @@ export function assignRoles(
   if (settings.enableModifiers && allowedModifiers.length > 0) {
     const modIdx = cryptoRandomInt(0, allowedModifiers.length - 1);
     selectedModifier = { ...allowedModifiers[modIdx], active: true };
+
+    if (selectedModifier.type === 'hot_seat') {
+      selectedModifier.eventTargetId = players[cryptoRandomInt(0, players.length - 1)].id;
+    } else if (selectedModifier.type === 'forbidden_word') {
+      const forbiddenWords = ['локация', 'подозрение', 'вопрос', 'шпион', 'секрет'];
+      selectedModifier.forbiddenWord =
+        forbiddenWords[cryptoRandomInt(0, forbiddenWords.length - 1)];
+    } else if (selectedModifier.type === 'cipher_challenge') {
+      const challenges = [
+        { clue: 'Продолжите ряд: 2, 3, 5, 8, 12, ?', solution: '17' },
+        { clue: 'Продолжите ряд: 1, 2, 4, 7, 11, ?', solution: '16' },
+        { clue: 'Продолжите ряд: 3, 6, 12, 24, ?', solution: '48' },
+      ];
+      selectedModifier.cipherChallenge =
+        challenges[cryptoRandomInt(0, challenges.length - 1)];
+    } else if (selectedModifier.type === 'false_lead') {
+      const falseLeads = allLocationNames.filter(
+        (locationName) => locationName !== secretLocation.name
+      );
+      if (falseLeads.length > 0) {
+        const falseLead = falseLeads[cryptoRandomInt(0, falseLeads.length - 1)];
+        for (const secret of Object.values(secrets)) {
+          if (secret.isSpy) {
+            secret.spyTip = `Перехваченная, но сомнительная наводка: вероятно, локация «${falseLead}».`;
+          }
+        }
+      }
+    }
   }
 
   return {

@@ -5,10 +5,7 @@ import {
   Vote,
   Target,
   MessageSquare,
-  Zap,
   Mic,
-  Shield,
-  Search,
 } from 'lucide-react';
 import {
   GameState,
@@ -16,6 +13,7 @@ import {
   PlayerSecret,
 } from '../../packages/shared/src/index';
 import { sound } from '../utils/sound';
+import { ModifierEventCard } from './ModifierEventCard';
 
 interface DiscussionScreenProps {
   gameState: GameState;
@@ -72,22 +70,14 @@ export const DiscussionScreen: React.FC<DiscussionScreenProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 select-none animate-in fade-in duration-300">
+    <div
+      className={`max-w-4xl mx-auto p-4 sm:p-6 space-y-6 select-none animate-in fade-in duration-300 ${
+        modifier?.type === 'blackout' ? 'brightness-75' : ''
+      }`}
+    >
       {/* Active Modifier Alert Banner */}
       {modifier && (
-        <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-500/40 flex items-center justify-between gap-3 shadow-lg">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-500/20 rounded-xl">
-              <Zap className="w-4 h-4 text-amber-400" />
-            </div>
-            <div>
-              <span className="font-bold text-xs text-amber-300 uppercase tracking-wide">
-                Активный модификатор: {modifier.name}
-              </span>
-              <p className="text-[11px] text-amber-200/80">{modifier.description}</p>
-            </div>
-          </div>
-        </div>
+        <ModifierEventCard modifier={modifier} players={players} />
       )}
 
       {/* Big Timer Card */}

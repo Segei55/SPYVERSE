@@ -350,6 +350,9 @@ export class RoomManager {
 
   public startDiscussionPhase(room: ServerRoom): void {
     room.gameState.phase = 'discussion';
+    if (room.gameState.currentModifier?.type === 'silent_round') {
+      room.gameState.currentModifier.eventEndsAt = Date.now() + 15000;
+    }
     this.broadcastRoomUpdate(room);
     this.startTimer(room);
     this.addSystemChatMessage(room, 'Фаза обсуждения! Задавайте вопросы и ищите шпиона.');

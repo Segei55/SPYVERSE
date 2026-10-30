@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Socket } from 'socket.io-client';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import {
   ChatMessage,
   GameSettings,
@@ -53,6 +55,7 @@ export function App() {
   const [isAutoUpdateSupported, setIsAutoUpdateSupported] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const androidBackActionRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     try {
@@ -410,6 +413,57 @@ export function App() {
     setCurrentMode('menu');
   };
 
+  androidBackActionRef.current = () => {
+    if (isChatOpen) {
+      setIsChatOpen(false);
+    } else if (isDownloadsOpen) {
+      setIsDownloadsOpen(false);
+    } else if (isPacksOpen) {
+      setIsPacksOpen(false);
+    } else if (isServerGuideOpen) {
+      setIsServerGuideOpen(false);
+    } else if (isSettingsOpen) {
+      setIsSettingsOpen(false);
+    } else if (isEarlyGuessOpen) {
+      setIsEarlyGuessOpen(false);
+    } else if (currentMode === 'pass_and_play') {
+      setCurrentMode('menu');
+    } else if (currentMode === 'online') {
+      handleLeaveRoom();
+    } else {
+      void CapacitorApp.exitApp();
+    }
+  };
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+
+    let active = true;
+    let removeBackButtonListener: (() => Promise<void>) | undefined;
+    void CapacitorApp.addListener('backButton', () => androidBackActionRef.current())
+      .then((listener) => {
+        if (active) {
+          removeBackButtonListener = () => listener.remove();
+        } else {
+          void listener.remove();
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setErrorMessage(
+            error instanceof Error
+              ? `Не удалось включить навигацию «Назад»: ${error.message}`
+              : 'Не удалось включить навигацию «Назад».'
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+      if (removeBackButtonListener) void removeBackButtonListener();
+    };
+  }, []);
+
   return (
     <div className="case-app min-h-screen bg-[#12130f] text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
       {/* Top Navbar */}
@@ -615,7 +669,16 @@ export function App() {
       {currentMode === 'online' && roomState && localPlayer && (
         <div className="sticky bottom-0 z-30 p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md border-t border-slate-800/80">
           <div className="max-w-5xl mx-auto">
-            <VoiceChatBar players={roomState.players} localPlayerId={localPlayer.id} />
+            <VoiceChatBar
+              players={roomState.players}
+              localPlayerId={localPlayer.id}
+              roundMuteEndsAt={
+                roomState.gameState.phase === 'discussion' &&
+                roomState.gameState.currentModifier?.type === 'silent_round'
+                  ? roomState.gameState.currentModifier.eventEndsAt
+                  : undefined
+              }
+            />
           </div>
         </div>
       )}

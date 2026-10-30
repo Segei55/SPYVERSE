@@ -37,6 +37,7 @@ export class WebRTCVoiceManager {
   private animFrameId: number | null = null;
 
   private isMuted: boolean = false;
+  private isRoundMuted: boolean = false;
   private isPushToTalk: boolean = false;
   private isPttActive: boolean = false;
   private isSpeaking: boolean = false;
@@ -275,7 +276,8 @@ export class WebRTCVoiceManager {
           this.onVolumeChange(normalizedVolume);
         }
 
-        const voiceEnabled = !this.isMuted && (!this.isPushToTalk || this.isPttActive);
+        const voiceEnabled =
+          !this.isMuted && !this.isRoundMuted && (!this.isPushToTalk || this.isPttActive);
         const isSpeakingNow = voiceEnabled && normalizedVolume > (this.isSpeaking ? 10 : 20);
         if (isSpeakingNow !== this.isSpeaking) {
           if (speakingCandidate !== isSpeakingNow) {
@@ -286,7 +288,7 @@ export class WebRTCVoiceManager {
             speakingCandidate = null;
             if (this.socket) {
               this.socket.emit('voice_state_update', {
-                isMuted: this.isMuted,
+                isMuted: this.isMuted || this.isRoundMuted,
                 isSpeaking: isSpeakingNow,
               });
             }
@@ -346,7 +348,20 @@ export class WebRTCVoiceManager {
     this.updateTrackState();
     if (this.socket) {
       this.socket.emit('voice_state_update', {
-        isMuted: this.isMuted,
+        isMuted: this.isMuted || this.isRoundMuted,
+        isSpeaking: false,
+      });
+    }
+  }
+
+  public setRoundMuted(muted: boolean): void {
+    if (this.isRoundMuted === muted) return;
+    this.isRoundMuted = muted;
+    this.isSpeaking = false;
+    this.updateTrackState();
+    if (this.socket) {
+      this.socket.emit('voice_state_update', {
+        isMuted: this.isMuted || this.isRoundMuted,
         isSpeaking: false,
       });
     }
@@ -390,7 +405,8 @@ export class WebRTCVoiceManager {
 
   private updateTrackState(): void {
     if (!this.localStream) return;
-    const shouldEnable = !this.isMuted && (!this.isPushToTalk || this.isPttActive);
+    const shouldEnable =
+      !this.isMuted && !this.isRoundMuted && (!this.isPushToTalk || this.isPttActive);
     this.localStream.getAudioTracks().forEach((track) => {
       track.enabled = true;
     });

@@ -8,16 +8,44 @@ import { Player } from '../../packages/shared/src/index';
 interface VoiceChatBarProps {
   players: Player[];
   localPlayerId: string;
+  roundMuteEndsAt?: number;
 }
 
-export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayerId }) => {
+export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({
+  players,
+  localPlayerId,
+  roundMuteEndsAt,
+}) => {
   const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
   const [isMuted, setIsMuted] = useState(voiceManager.getIsMuted());
+  const [isRoundMuted, setIsRoundMuted] = useState(false);
   const [isPtt, setIsPtt] = useState(voiceManager.getIsPushToTalk());
   const [isPttPressed, setIsPttPressed] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [isMicReady, setIsMicReady] = useState(false);
   const [isRequestingMic, setIsRequestingMic] = useState(false);
+
+  useEffect(() => {
+    if (!roundMuteEndsAt) {
+      voiceManager.setRoundMuted(false);
+      setIsRoundMuted(false);
+      setIsMuted(voiceManager.getIsMuted());
+      return;
+    }
+
+    const updateRoundMute = () => {
+      const shouldMute = Date.now() < roundMuteEndsAt;
+      voiceManager.setRoundMuted(shouldMute);
+      setIsRoundMuted(shouldMute);
+      setIsMuted(voiceManager.getIsMuted());
+    };
+    updateRoundMute();
+    const interval = setInterval(updateRoundMute, 250);
+    return () => {
+      clearInterval(interval);
+      voiceManager.setRoundMuted(false);
+    };
+  }, [roundMuteEndsAt]);
 
   useEffect(() => {
     if (isAndroidNative) return () => voiceManager.stopMicrophone();
@@ -123,16 +151,23 @@ export const VoiceChatBar: React.FC<VoiceChatBarProps> = ({ players, localPlayer
           </button>
         ) : (
           <button
-            onClick={toggleMute}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              isMuted
-                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20'
-                : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/25 shadow-lg shadow-emerald-500/10'
-            }`}
-            aria-label={isMuted ? 'Включить микрофон' : 'Отключить микрофон'}
-          >
-            {isMuted ? <MicOff className="w-4 h-4 text-rose-400" /> : <Mic className="w-4 h-4 text-emerald-400" />}
-            <span>{isMuted ? 'Микрофон выкл' : 'Микрофон вкл'}</span>
+              onClick={toggleMute}
+              disabled={isRoundMuted}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                isMuted || isRoundMuted
+                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20'
+                  : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/25 shadow-lg shadow-emerald-500/10'
+              } ${isRoundMuted ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
+              aria-label={
+                isRoundMuted
+                  ? 'Микрофон временно отключён модификатором'
+                  : isMuted
+                    ? 'Включить микрофон'
+                    : 'Отключить микрофон'
+              }
+            >
+              {isMuted || isRoundMuted ? <MicOff className="w-4 h-4 text-rose-400" /> : <Mic className="w-4 h-4 text-emerald-400" />}
+              <span>{isRoundMuted ? 'Тихий раунд' : isMuted ? 'Микрофон выкл' : 'Микрофон вкл'}</span>
           </button>
         )}
 

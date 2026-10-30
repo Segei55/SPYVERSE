@@ -443,7 +443,7 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
                 />
               </button>
             </div>
-            <div className="space-y-1">
+            <div className="grid max-h-64 grid-cols-1 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">
               {AVAILABLE_MODIFIERS.map((modifier) => {
                 const isSelected = modifierIds.includes(modifier.id);
                 return (

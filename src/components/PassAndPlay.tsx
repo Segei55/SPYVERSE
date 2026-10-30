@@ -33,6 +33,7 @@ import {
   checkSpyGuess,
 } from '../../packages/game-engine/src/index';
 import { sound } from '../utils/sound';
+import { ModifierEventCard } from './ModifierEventCard';
 
 interface PassAndPlayProps {
   customPacks: LocationPack[];
@@ -171,6 +172,11 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
     } else {
       // All players acknowledged their role!
       sound.playReveal();
+      setCurrentModifier((modifier) =>
+        modifier?.type === 'silent_round'
+          ? { ...modifier, eventEndsAt: Date.now() + 15000 }
+          : modifier
+      );
       setPhase('discussion');
     }
   };
@@ -244,9 +250,23 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
 
   const currentSecret = secrets[`offline_p_${currentHandoverIndex}`];
   const selectedPack = allPacks.find((p) => p.id === selectedPackId) || OFFICIAL_PACKS[0];
+  const discussionPlayers: Player[] = playerNames.map((name, i) => ({
+    id: `offline_p_${i}`,
+    name,
+    avatar: '',
+    isHost: i === 0,
+    isConnected: true,
+    isReady: true,
+    isMuted: false,
+    isSpeaking: false,
+  }));
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 select-none">
+    <div
+      className={`max-w-4xl mx-auto p-4 sm:p-6 select-none ${
+        phase === 'discussion' && currentModifier?.type === 'blackout' ? 'brightness-75' : ''
+      }`}
+    >
       {/* PHASE 1: SETUP */}
       {phase === 'setup' && (
         <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6">
@@ -446,7 +466,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
                     />
                   </button>
                 </div>
-                <div className="space-y-1">
+                <div className="grid max-h-64 grid-cols-1 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">
                   {AVAILABLE_MODIFIERS.map((modifier) => {
                     const isSelected = selectedModifierIds.includes(modifier.id);
                     return (
@@ -551,6 +571,11 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
               <p className="text-xs text-slate-300 leading-relaxed">
                 Вы не знаете секретную локацию! Слушайте вопросы других игроков, делайте вид, что знаете место, и постарайтесь вычислить его до конца партии.
               </p>
+              {currentSecret.spyTip && (
+                <p className="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-200">
+                  {currentSecret.spyTip}
+                </p>
+              )}
               <div>
                 <span className="text-xs font-bold text-slate-300 block mb-2">
                   Возможные локации в этом наборе:
@@ -610,12 +635,7 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
       {phase === 'discussion' && (
         <div className="case-surface bg-slate-900 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6">
           {currentModifier && (
-            <div className="rounded-2xl border border-amber-500/40 bg-amber-950/40 p-3.5">
-              <span className="text-xs font-bold uppercase tracking-wide text-amber-300">
-                Модификатор раунда: {currentModifier.name}
-              </span>
-              <p className="mt-1 text-[11px] text-amber-200/80">{currentModifier.description}</p>
-            </div>
+            <ModifierEventCard modifier={currentModifier} players={discussionPlayers} />
           )}
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>

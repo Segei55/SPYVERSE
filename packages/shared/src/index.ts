@@ -46,8 +46,30 @@ export interface GameModifier {
   name: string;
   description: string;
   icon: string;
-  type: 'time_reduced' | 'whisper_mode' | 'blind_vote' | 'double_agent' | 'radio_static';
+  type:
+    | 'time_reduced'
+    | 'whisper_mode'
+    | 'blind_vote'
+    | 'radio_static'
+    | 'hot_seat'
+    | 'forbidden_word'
+    | 'two_truths'
+    | 'silent_round'
+    | 'cross_exam'
+    | 'false_lead'
+    | 'cipher_challenge'
+    | 'blackout'
+    | 'reverse_order'
+    | 'echo_answer'
+    | 'rapid_fire';
   active: boolean;
+  eventTargetId?: string;
+  eventEndsAt?: number;
+  forbiddenWord?: string;
+  cipherChallenge?: {
+    clue: string;
+    solution: string;
+  };
 }
 
 export interface LocationItem {

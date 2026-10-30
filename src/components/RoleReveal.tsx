@@ -64,6 +64,11 @@ export const RoleReveal: React.FC<RoleRevealProps> = ({ secret, playerName, onAc
                   <p className="text-xs text-slate-300 leading-relaxed">
                     Вы не знаете секретную локацию! Ваша задача — задавать уклончивые вопросы, не выдать себя и вычислить локацию среди возможных кандидатов.
                   </p>
+                  {secret.spyTip && (
+                    <div className="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-200">
+                      {secret.spyTip}
+                    </div>
+                  )}
 
                   <div>
                     <div className="flex items-center justify-between mb-2">

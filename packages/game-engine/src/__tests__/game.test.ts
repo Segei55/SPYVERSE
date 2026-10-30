@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  AVAILABLE_MODIFIERS,
   assignRoles,
   calculateVoteResults,
   checkSpyGuess,
@@ -146,6 +147,48 @@ test('assignRoles rejects invalid player count and spy count', () => {
   assert.throws(() => {
     assignRoles(players5, mockPack, { ...mockSettings, spyCount: 3 });
   }, /Недопустимое количество шпионов/);
+});
+
+test('the game offers fifteen distinct round modifiers', () => {
+  assert.equal(AVAILABLE_MODIFIERS.length, 15);
+  assert.equal(new Set(AVAILABLE_MODIFIERS.map((modifier) => modifier.id)).size, 15);
+});
+
+test('hot seat selects a player in the current game', () => {
+  const players = createMockPlayers(5);
+  const result = assignRoles(players, mockPack, {
+    ...mockSettings,
+    enableModifiers: true,
+    modifierIds: ['mod_hot_seat'],
+  });
+
+  assert.equal(result.modifier?.type, 'hot_seat');
+  assert.ok(players.some((player) => player.id === result.modifier?.eventTargetId));
+});
+
+test('event modifiers include shared data and false leads do not reveal the location', () => {
+  const players = createMockPlayers(5);
+  const cipherGame = assignRoles(players, mockPack, {
+    ...mockSettings,
+    enableModifiers: true,
+    modifierIds: ['mod_cipher'],
+  });
+  assert.equal(cipherGame.modifier?.type, 'cipher_challenge');
+  assert.ok(cipherGame.modifier?.cipherChallenge?.clue);
+  assert.ok(cipherGame.modifier?.cipherChallenge?.solution);
+
+  const falseLeadGame = assignRoles(players, mockPack, {
+    ...mockSettings,
+    enableModifiers: true,
+    modifierIds: ['mod_false_lead'],
+  });
+  const spy = Object.values(falseLeadGame.secrets).find((secret) => secret.isSpy);
+  assert.ok(spy?.spyTip);
+  assert.ok(
+    mockPack.locations
+      .filter((location) => location.name !== falseLeadGame.secretLocationName)
+      .some((location) => spy?.spyTip?.includes(location.name))
+  );
 });
 
 test('calculateVoteResults detects majority elimination', () => {
