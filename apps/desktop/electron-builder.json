@@ -2,7 +2,12 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.spyverse.desktop",
   "productName": "SPYVERSE",
-  "publish": null,
+  "publish": {
+    "provider": "github",
+    "owner": "Segei55",
+    "repo": "SPYVERSE",
+    "releaseType": "release"
+  },
   "icon": "icon.png",
   "directories": {
     "output": "dist-electron"

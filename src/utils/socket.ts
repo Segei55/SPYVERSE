@@ -1,12 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-
-declare global {
-  interface Window {
-    electronAPI?: {
-      serverUrl: string;
-    };
-  }
-}
+import type { ElectronAPI } from './electron';
 
 let currentSocket: Socket | null = null;
 let currentServerUrl: string = '';

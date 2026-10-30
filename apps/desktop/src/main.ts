@@ -1,10 +1,40 @@
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import http from 'http';
 import net from 'net';
 import path from 'path';
+import type { UpdateStatus } from '../../../src/utils/electron';
 
 let mainWindow: BrowserWindow | null = null;
+let isUpdateDownloaded = false;
+let installAfterDownload = false;
+
+const isUpdateSupported = () =>
+  app.isPackaged && process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_DIR;
+
+function emitUpdateStatus(status: UpdateStatus): void {
+  mainWindow?.webContents.send('update:status', status);
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Не удалось проверить наличие обновления.';
+}
+
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.on('checking-for-update', () => emitUpdateStatus({ state: 'checking' }));
+autoUpdater.on('update-available', (info) => emitUpdateStatus({ state: 'available', version: info.version }));
+autoUpdater.on('update-not-available', () => emitUpdateStatus({ state: 'not-available' }));
+autoUpdater.on('download-progress', (progress) =>
+  emitUpdateStatus({ state: 'downloading', percent: Math.round(progress.percent) })
+);
+autoUpdater.on('update-downloaded', (info) => {
+  isUpdateDownloaded = true;
+  emitUpdateStatus({ state: 'downloaded', version: info.version });
+  if (installAfterDownload) autoUpdater.quitAndInstall(true, true);
+});
+autoUpdater.on('error', (error) => emitUpdateStatus({ state: 'error', message: getErrorMessage(error) }));
 
 function createWindow(serverUrl: string): void {
   mainWindow = new BrowserWindow({
@@ -140,6 +170,42 @@ ipcMain.handle('window:close', () => {
 
 ipcMain.handle('app:version', () => {
   return app.getVersion();
+});
+
+ipcMain.handle('release:latest', async () => {
+  const response = await fetch('https://api.github.com/repos/Segei55/SPYVERSE/releases/latest', {
+    headers: { Accept: 'application/vnd.github+json' },
+  });
+  if (!response.ok) {
+    throw new Error(response.status === 404
+      ? 'Публичных релизов SPYVERSE пока нет.'
+      : `GitHub вернул ошибку ${response.status} при загрузке релиза.`);
+  }
+  return response.json();
+});
+
+ipcMain.handle('update:supported', () => isUpdateSupported());
+
+ipcMain.handle('update:check', async () => {
+  if (!isUpdateSupported()) return;
+  await autoUpdater.checkForUpdates();
+});
+
+ipcMain.handle('update:install', async () => {
+  if (!isUpdateSupported()) {
+    throw new Error('Автоматическое обновление доступно только в установленной версии для Windows.');
+  }
+  if (isUpdateDownloaded) {
+    autoUpdater.quitAndInstall(true, true);
+    return;
+  }
+  installAfterDownload = true;
+  try {
+    await autoUpdater.downloadUpdate();
+  } catch (error) {
+    installAfterDownload = false;
+    throw error;
+  }
 });
 
 const isServerMode = process.argv.includes('--server');

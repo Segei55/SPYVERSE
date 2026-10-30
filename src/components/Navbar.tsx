@@ -1,10 +1,11 @@
 import React from 'react';
-import { Volume2, VolumeX, Settings, Server, Shield, FolderOpen } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Server, Shield, FolderOpen, Download } from 'lucide-react';
 import { sound } from '../utils/sound';
 
 interface NavbarProps {
   onOpenSettings: () => void;
   onOpenServerGuide: () => void;
+  onOpenDownloads: () => void;
   onOpenPacks: () => void;
   isOnlineConnected?: boolean;
   serverUrl?: string;
@@ -13,6 +14,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onOpenServerGuide,
+  onOpenDownloads,
   onOpenPacks,
   isOnlineConnected,
   serverUrl,
@@ -79,6 +81,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           aria-label="Свой сервер и руководство по сети"
         >
           <Server className="w-4 h-4 text-cyan-400" />
+        </button>
+
+        {/* Download links */}
+        <button
+          onClick={() => {
+            sound.playClick();
+            onOpenDownloads();
+          }}
+          className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition-colors cursor-pointer"
+          title="Скачать игру"
+          aria-label="Скачать игру"
+        >
+          <Download className="w-4 h-4 text-emerald-400" />
         </button>
 
         {/* Sound toggle */}

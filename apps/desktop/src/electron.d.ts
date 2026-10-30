@@ -20,6 +20,7 @@ declare module 'electron' {
     constructor(options?: BrowserWindowOptions);
     webContents: {
       setWindowOpenHandler: (handler: (details: { url: string }) => { action: 'deny' | 'allow' }) => void;
+      send: (channel: string, ...args: any[]) => void;
     };
     minimize: () => void;
     maximize: () => void;
@@ -37,6 +38,7 @@ declare module 'electron' {
     on: (event: string, callback: () => void) => void;
     quit: () => void;
     getVersion: () => string;
+    isPackaged: boolean;
   };
 
   export const shell: {
@@ -49,6 +51,8 @@ declare module 'electron' {
 
   export const ipcRenderer: {
     invoke: (channel: string, ...args: any[]) => Promise<any>;
+    on: (channel: string, listener: (event: unknown, ...args: any[]) => void) => void;
+    removeListener: (channel: string, listener: (event: unknown, ...args: any[]) => void) => void;
   };
 
   export const contextBridge: {

@@ -28,6 +28,9 @@ import { ChatDrawer } from './components/ChatDrawer';
 import { SettingsModal } from './components/SettingsModal';
 import { ServerGuideModal } from './components/ServerGuideModal';
 import { PacksManagerModal } from './components/PacksManagerModal';
+import { DownloadsModal } from './components/DownloadsModal';
+import type { UpdateStatus } from './utils/electron';
+import { fetchLatestRelease, isNewerVersion, type LatestRelease } from './utils/releases';
 
 export function App() {
   // Navigation & Screen state
@@ -37,8 +40,85 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isServerGuideOpen, setIsServerGuideOpen] = useState(false);
   const [isPacksOpen, setIsPacksOpen] = useState(false);
+  const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
+  const [latestRelease, setLatestRelease] = useState<LatestRelease | null>(null);
+  const [releaseCheckError, setReleaseCheckError] = useState<string | null>(null);
+  const [isAutoUpdateSupported, setIsAutoUpdateSupported] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    const electronAPI = window.electronAPI;
+    let active = true;
+    const unsubscribe = electronAPI?.onUpdateStatus((status) => {
+      if (active) setUpdateStatus(status);
+    });
+
+    void fetchLatestRelease()
+      .then(async (release) => {
+        const currentVersion = electronAPI ? await electronAPI.getVersion() : __APP_VERSION__;
+        if (active && isNewerVersion(release.version, currentVersion)) setLatestRelease(release);
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Не удалось проверить наличие обновления.';
+        if (active && !message.includes('Публичных релизов SPYVERSE пока нет')) {
+          setReleaseCheckError(message);
+        }
+      });
+
+    if (electronAPI) {
+      void electronAPI
+        .getUpdateSupport()
+        .then((supported) => {
+          if (!active) return;
+          setIsAutoUpdateSupported(supported);
+          if (supported) {
+            void electronAPI.checkForUpdates().catch((error: unknown) => {
+              setUpdateStatus({
+                state: 'error',
+                message: error instanceof Error ? error.message : 'Не удалось проверить наличие обновления.',
+              });
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          if (active) {
+            setUpdateStatus({
+              state: 'error',
+              message: error instanceof Error ? error.message : 'Не удалось проверить поддержку обновлений.',
+            });
+          }
+        });
+    }
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, []);
+
+  const checkForUpdates = () => {
+    setReleaseCheckError(null);
+    void fetchLatestRelease()
+      .then(async (release) => {
+        const currentVersion = window.electronAPI
+          ? await window.electronAPI.getVersion()
+          : __APP_VERSION__;
+        setLatestRelease(isNewerVersion(release.version, currentVersion) ? release : null);
+      })
+      .catch((error: unknown) => {
+        setReleaseCheckError(error instanceof Error ? error.message : 'Не удалось проверить наличие обновления.');
+      });
+    if (isAutoUpdateSupported) {
+      void window.electronAPI?.checkForUpdates().catch((error: unknown) => {
+        setUpdateStatus({
+          state: 'error',
+          message: error instanceof Error ? error.message : 'Не удалось проверить наличие обновления.',
+        });
+      });
+    }
+  };
 
   // Custom packs persisted in localStorage
   const [customPacks, setCustomPacks] = useState<LocationPack[]>(() => {
@@ -324,9 +404,74 @@ export function App() {
       <Navbar
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenServerGuide={() => setIsServerGuideOpen(true)}
+        onOpenDownloads={() => setIsDownloadsOpen(true)}
         onOpenPacks={() => setIsPacksOpen(true)}
         isOnlineConnected={currentMode === 'online' && Boolean(roomState)}
       />
+
+      {(latestRelease ||
+        releaseCheckError ||
+        (updateStatus && updateStatus.state !== 'checking' && updateStatus.state !== 'not-available')) && (
+        <div className="flex items-center justify-between gap-3 bg-emerald-950/90 border-b border-emerald-500/40 text-emerald-100 text-sm py-2.5 px-4">
+          <span>
+            {updateStatus?.state === 'downloading'
+              ? `Загрузка обновления: ${updateStatus.percent}%.`
+              : updateStatus?.state === 'downloaded'
+                ? `Обновление ${updateStatus.version} готово к установке.`
+                : updateStatus?.state === 'error'
+                  ? `Ошибка обновления: ${updateStatus.message}`
+                  : latestRelease
+                    ? `Доступна новая версия ${latestRelease.version}.`
+                    : `Не удалось проверить обновления: ${releaseCheckError}`}
+          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            {(latestRelease || releaseCheckError || updateStatus?.state === 'error') && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (updateStatus?.state === 'error') {
+                    setUpdateStatus(null);
+                    checkForUpdates();
+                  } else if (latestRelease && isAutoUpdateSupported) {
+                    void window.electronAPI?.installUpdate().catch((error: unknown) => {
+                      setUpdateStatus({
+                        state: 'error',
+                        message: error instanceof Error ? error.message : 'Не удалось установить обновление.',
+                      });
+                    });
+                  } else if (latestRelease) {
+                    setIsDownloadsOpen(true);
+                  } else {
+                    checkForUpdates();
+                  }
+                }}
+                className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-colors cursor-pointer"
+              >
+                {updateStatus?.state === 'error' || releaseCheckError
+                  ? 'Повторить проверку'
+                  : isAutoUpdateSupported
+                    ? 'Установить обновление'
+                    : 'Скачать обновление'}
+              </button>
+            )}
+            {updateStatus?.state === 'downloading' && (
+              <span className="text-xs font-semibold">Не закрывайте приложение</span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setLatestRelease(null);
+                setReleaseCheckError(null);
+                setUpdateStatus(null);
+              }}
+              className="rounded-lg px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-900 transition-colors cursor-pointer"
+              aria-label="Скрыть уведомление об обновлении"
+            >
+              Скрыть
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error notification banner */}
       {errorMessage && (
@@ -474,6 +619,7 @@ export function App() {
       {/* Modals */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
       <ServerGuideModal isOpen={isServerGuideOpen} onClose={() => setIsServerGuideOpen(false)} />
+      <DownloadsModal isOpen={isDownloadsOpen} onClose={() => setIsDownloadsOpen(false)} />
       <PacksManagerModal
         isOpen={isPacksOpen}
         onClose={() => setIsPacksOpen(false)}

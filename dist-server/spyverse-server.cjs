@@ -63317,7 +63317,32 @@ var RoomManager = class {
 };
 
 // apps/server/src/socketHandlers.ts
+var DEFAULT_VOICE_ICE_SERVERS = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" }
+];
+function isIceServer(value) {
+  if (!value || typeof value !== "object") return false;
+  const server2 = value;
+  const hasUrls = typeof server2.urls === "string" && server2.urls.length > 0 || Array.isArray(server2.urls) && server2.urls.length > 0 && server2.urls.every((url2) => typeof url2 === "string" && url2.length > 0);
+  return hasUrls && (server2.username === void 0 || typeof server2.username === "string") && (server2.credential === void 0 || typeof server2.credential === "string");
+}
+function getVoiceIceServers() {
+  const configured = process.env.WEBRTC_ICE_SERVERS;
+  if (!configured) return DEFAULT_VOICE_ICE_SERVERS;
+  try {
+    const parsed = JSON.parse(configured);
+    if (!Array.isArray(parsed) || !parsed.every(isIceServer)) {
+      throw new Error("Expected a JSON array of ICE server objects with valid urls.");
+    }
+    return [...DEFAULT_VOICE_ICE_SERVERS, ...parsed];
+  } catch (error62) {
+    const message = error62 instanceof Error ? error62.message : String(error62);
+    throw new Error(`[Voice] Invalid WEBRTC_ICE_SERVERS configuration: ${message}`);
+  }
+}
 function setupSocketHandlers(io3, roomManager2) {
+  const voiceIceServers = getVoiceIceServers();
   io3.on("connection", (socket) => {
     socket.on("room_create", (payload) => {
       const parsed = CreateRoomPayloadSchema.safeParse(payload);
@@ -63330,6 +63355,7 @@ function setupSocketHandlers(io3, roomManager2) {
       }
       const { hostName, avatar, settings } = parsed.data;
       const result = roomManager2.createRoom(socket, hostName, avatar, settings);
+      socket.emit("voice_ice_servers", voiceIceServers);
       socket.emit("room_created", result);
     });
     socket.on("room_join", (payload) => {
@@ -63349,6 +63375,7 @@ function setupSocketHandlers(io3, roomManager2) {
           message: result.error || "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F \u043A \u043A\u043E\u043C\u043D\u0430\u0442\u0435."
         });
       } else {
+        socket.emit("voice_ice_servers", voiceIceServers);
         socket.emit("room_joined", {
           roomId,
           sessionToken: result.sessionToken,

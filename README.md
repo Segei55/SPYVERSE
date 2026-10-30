@@ -150,9 +150,8 @@ npx electron-builder --config apps/desktop/electron-builder.json --linux
 Android-версия является клиентом: серверную комнату запускает игрок на ПК, а телефон подключается к его адресу по LAN или VPN. Android-приложение запросит доступ к микрофону при первом включении голосового чата, а доступ к файлам — при импорте или экспорте пользовательского набора.
 
 Чтобы скачать готовый APK:
-1. Откройте вкладку **Actions** репозитория и выберите workflow **Build Android APK**.
-2. Запустите его вручную через **Run workflow** либо дождитесь автоматической сборки после push в `main`/`master` или публикации тега `v*`.
-3. Скачайте артефакт `spyverse-android-apk` у завершённого запуска.
+1. Откройте раздел **Releases** репозитория.
+2. Скачайте файл `SPYVERSE-android-<версия>.apk` из последнего релиза.
 
 Проект Android создаётся внутри workflow и не хранится в Git. Для локальной сборки:
 ```bash
@@ -179,10 +178,14 @@ node dist-server/spyverse-server.cjs
 ### Сборки в GitHub Actions
 | Workflow | Артефакт |
 |---|---|
-| `desktop.yml` | Windows: `*.exe` (установщик и portable); Linux: `*.AppImage`, `*.deb` |
-| `android.yml` | `app-debug.apk` (Java 21, Capacitor генерирует проект в `apps/mobile/android`) |
+| `desktop.yml` | При push тега `v*` собирает Windows, Linux и Android и публикует установщики всех платформ в GitHub Releases |
+| `android.yml` | Проверочная сборка APK (Java 21, Capacitor генерирует проект в `apps/mobile/android`) |
 | `server.yml` | `spyverse-standalone-server` (`spyverse-server.cjs`, `dist/`, `server.bat`) |
 | `ci.yml` | Проверка типов, тесты, сборка клиента |
+
+Ссылки для окна «Скачать SPYVERSE» задаются в объекте `DOWNLOAD_LINKS` файла `src/components/DownloadsModal.tsx`. Пока значение ссылки пустое, соответствующий вариант отображается как недоступный.
+
+Клиенты проверяют последнюю публичную версию через GitHub Releases. Чтобы выпустить обновление, обновите `version` в корневом `package.json`, создайте и отправьте соответствующий тег `v*` (например, `v1.1.0`). Workflow соберёт Windows, Linux и Android, опубликует файлы в одном релизе, а окно загрузки получит ссылки напрямую из него. Установленная Windows-версия может скачать обновление и запустить установщик из приложения; остальные платформы получат уведомление и ссылку на соответствующую сборку.
 
 ---
 
