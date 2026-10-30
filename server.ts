@@ -28,7 +28,7 @@ async function startServer() {
   // API endpoint for host network status & interfaces
   app.get('/api/server-info', (req, res) => {
     res.json({
-      version: '1.1.1',
+      version: '1.1.2',
       port,
       activeRooms: roomManager.getRoomCount(),
       totalPlayers: roomManager.getTotalPlayerCount(),

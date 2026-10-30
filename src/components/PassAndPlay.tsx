@@ -466,14 +466,13 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
                     />
                   </button>
                 </div>
-                <div className="grid max-h-64 grid-cols-1 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">
+                <div className="grid max-h-64 min-w-0 grid-cols-1 gap-1 overflow-y-auto overflow-x-hidden pr-1">
                   {AVAILABLE_MODIFIERS.map((modifier) => {
                     const isSelected = selectedModifierIds.includes(modifier.id);
                     return (
                       <label
                         key={modifier.id}
-                        title={modifier.description}
-                        className={`group relative flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] transition-colors ${
+                        className={`flex min-w-0 cursor-pointer items-start gap-2 rounded-lg px-2 py-2 text-[11px] transition-colors ${
                           isSelected ? 'bg-amber-500/10 text-amber-200' : 'text-slate-400 hover:bg-slate-800'
                         }`}
                       >
@@ -487,11 +486,13 @@ export const PassAndPlay: React.FC<PassAndPlayProps> = ({ customPacks, onBackToM
                                 : [...current, modifier.id]
                             );
                           }}
-                          className="accent-amber-400"
+                          className="mt-0.5 shrink-0 accent-amber-400"
                         />
-                        <span>{modifier.name}</span>
-                        <span className="pointer-events-none absolute bottom-full left-0 z-20 mb-1 hidden w-56 rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] leading-relaxed text-slate-200 shadow-xl group-hover:block group-focus-within:block">
-                          {modifier.description}
+                        <span className="min-w-0">
+                          <span className="block break-words font-semibold">{modifier.name}</span>
+                          <span className="mt-0.5 block break-words text-[10px] leading-relaxed text-slate-400">
+                            {modifier.description}
+                          </span>
                         </span>
                       </label>
                     );

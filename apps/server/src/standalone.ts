@@ -7,7 +7,7 @@ import { RoomManager } from './RoomManager';
 import { setupSocketHandlers } from './socketHandlers';
 import { getAvailableNetworkInterfaces } from './network';
 
-const SERVER_VERSION = '1.1.1';
+const SERVER_VERSION = '1.1.2';
 const port = parseInt(process.env.PORT || '3001', 10);
 const app = express();
 const server = http.createServer(app);
