@@ -43,3 +43,21 @@ test('getReleaseDownloads recognizes a portable executable without a separator',
 
   assert.equal(getReleaseDownloads(release).windows.portable, 'https://example.com/portable.exe');
 });
+
+test('getReleaseDownloads recognizes updater and legacy Windows asset names', () => {
+  const release: LatestRelease = {
+    version: '1.1.1',
+    tag: 'v1.1.1',
+    url: 'https://github.com/Segei55/SPYVERSE/releases/tag/v1.1.1',
+    assets: [
+      { name: 'SPYVERSE-Setup-1.1.1.exe', url: 'https://example.com/updater-installer.exe' },
+      { name: 'SPYVERSE Setup 1.1.1.exe', url: 'https://example.com/legacy-installer.exe' },
+      { name: 'SPYVERSE 1.1.1.exe', url: 'https://example.com/portable.exe' },
+    ],
+  };
+
+  assert.deepEqual(getReleaseDownloads(release).windows, {
+    installer: 'https://example.com/updater-installer.exe',
+    portable: 'https://example.com/portable.exe',
+  });
+});

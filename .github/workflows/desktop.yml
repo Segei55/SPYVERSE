@@ -39,6 +39,22 @@ jobs:
       - name: Build Windows Application
         run: npx electron-builder --config apps/desktop/electron-builder.json --win --publish never
 
+      - name: Normalize Windows release asset names
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $installer = "dist-electron\SPYVERSE.Setup.$version.exe"
+          $portable = "dist-electron\SPYVERSE.$version.exe"
+          if (-not (Test-Path $installer)) {
+            throw "Windows installer was not found: $installer"
+          }
+          if (-not (Test-Path $portable)) {
+            throw "Windows portable build was not found: $portable"
+          }
+          Move-Item $installer "dist-electron\SPYVERSE-Setup-$version.exe"
+          Copy-Item "dist-electron\SPYVERSE-Setup-$version.exe" "dist-electron\SPYVERSE Setup $version.exe"
+          Move-Item $portable "dist-electron\SPYVERSE $version.exe"
+
       - name: Upload Windows Release Assets
         uses: actions/upload-artifact@v4
         with:
