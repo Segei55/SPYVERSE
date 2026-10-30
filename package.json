@@ -19,7 +19,7 @@
     "preview": "vite preview",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "lint": "tsc --noEmit",
-    "test": "npx --yes tsx --test packages/game-engine/src/__tests__/game.test.ts packages/game-engine/src/__tests__/content.test.ts",
+    "test": "npx --yes tsx --test packages/game-engine/src/__tests__/game.test.ts packages/game-engine/src/__tests__/content.test.ts src/utils/__tests__/releases.test.ts",
     "start:server": "tsx apps/server/src/standalone.ts",
     "build:server": "esbuild apps/server/src/standalone.ts --bundle --platform=node --target=node20 --outfile=dist-server/spyverse-server.cjs",
     "build:desktop": "npm run build:server && npm run build && npm run build -w @spyverse/desktop && electron-builder --config apps/desktop/electron-builder.json --dir",

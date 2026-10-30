@@ -101,8 +101,8 @@ export function getReleaseDownloads(release: LatestRelease) {
 
   return {
     windows: {
-      installer: getAsset(/^SPYVERSE Setup .*\.exe$/i),
-      portable: getAsset(/^SPYVERSE (?!Setup ).*\.exe$/i),
+      installer: getAsset(/^SPYVERSE[ ._-]*Setup[ ._-]*.+\.exe$/i),
+      portable: getAsset(/^SPYVERSE(?![ ._-]*Setup(?:[ ._-]|$))[ ._-]*.+\.exe$/i),
     },
     linux: {
       appImage: getAsset(/\.AppImage$/i),
