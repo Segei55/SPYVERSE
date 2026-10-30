@@ -50,6 +50,7 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
   >(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+  const canManagePacks = Capacitor.isNativePlatform() || Boolean(window.electronAPI);
 
   if (!isOpen) return null;
 
@@ -112,6 +113,10 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
 
   const handleImportClick = () => {
     sound.playClick();
+    if (!canManagePacks) {
+      showNotice('Создавать и импортировать наборы можно в приложении SPYVERSE.');
+      return;
+    }
     if (isAndroidNative && !fileAccessGranted) {
       setFileAccessRequest({ type: 'import' });
       return;
@@ -130,6 +135,11 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!canManagePacks) {
+      showNotice('Импорт наборов доступен только в приложении SPYVERSE.');
+      e.target.value = '';
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -158,6 +168,10 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
   };
 
   const handleDuplicate = (pack: LocationPack) => {
+    if (!canManagePacks) {
+      showNotice('Создавать наборы можно только в приложении SPYVERSE.');
+      return;
+    }
     sound.playClick();
     const cloned: LocationPack = {
       ...pack,
@@ -174,6 +188,10 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
   };
 
   const handleDelete = (packId: string) => {
+    if (!canManagePacks) {
+      showNotice('Управлять пользовательскими наборами можно в приложении SPYVERSE.');
+      return;
+    }
     if (!confirm('Вы действительно хотите удалить этот пользовательский набор?')) return;
     sound.playClick();
     const updated = customPacks.filter((p) => p.id !== packId);
@@ -183,6 +201,10 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
   };
 
   const handleStartCreate = () => {
+    if (!canManagePacks) {
+      showNotice('Создавать наборы можно только в приложении SPYVERSE.');
+      return;
+    }
     sound.playClick();
     const newPack: LocationPack = {
       id: `custom_${Date.now()}`,
@@ -222,6 +244,10 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
 
   const handleSaveEdit = () => {
     if (!editingPack) return;
+    if (!canManagePacks) {
+      showNotice('Изменять наборы можно только в приложении SPYVERSE.');
+      return;
+    }
     const val = validatePack(editingPack);
     if (!val.success) {
       sound.playAlarm();
@@ -267,32 +293,38 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
               <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 <span>Библиотека и редактор наборов</span>
                 <span className="text-xs bg-emerald-950 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono">
-                  19 стандартных
+                  {OFFICIAL_PACKS.length} стандартных
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                Создавайте свои тематические миры или используйте готовые наборы
+                {canManagePacks
+                  ? 'Создавайте свои тематические миры или используйте готовые наборы'
+                  : 'В веб-версии наборы доступны только для просмотра и экспорта'}
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <button
-              onClick={handleImportClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all cursor-pointer"
-            >
-              <Upload className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Импорт JSON</span>
-            </button>
+            {canManagePacks && (
+              <button
+                onClick={handleImportClick}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Импорт JSON</span>
+              </button>
+            )}
             <input ref={importInputRef} type="file" accept=".json,application/json" onChange={handleImportFile} className="hidden" />
 
-            <button
-              onClick={handleStartCreate}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 transition-all cursor-pointer shadow-lg shadow-emerald-500/20"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Создать набор</span>
-            </button>
+            {canManagePacks && (
+              <button
+                onClick={handleStartCreate}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-xs font-bold text-slate-950 transition-all cursor-pointer shadow-lg shadow-emerald-500/20"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Создать набор</span>
+              </button>
+            )}
 
             <button
               onClick={() => {
@@ -358,7 +390,7 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
                     : 'text-slate-400 hover:text-white bg-slate-900'
                 }`}
               >
-                Официальные (19)
+                Официальные ({OFFICIAL_PACKS.length})
               </button>
               <button
                 onClick={() => {
@@ -394,7 +426,9 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
               {packsToShow.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-500">
                   {activeTab === 'custom'
-                    ? 'Пользовательских наборов пока нет. Создайте свой или импортируйте JSON!'
+                    ? canManagePacks
+                      ? 'Пользовательских наборов пока нет. Создайте свой или импортируйте JSON!'
+                      : 'Пользовательских наборов пока нет. Создайте их или импортируйте в приложении SPYVERSE.'
                     : 'Ничего не найдено'}
                 </div>
               ) : (
@@ -600,16 +634,18 @@ export const PacksManagerModal: React.FC<PacksManagerModalProps> = ({
                       <span>Экспорт</span>
                     </button>
 
-                    <button
-                      onClick={() => handleDuplicate(selectedPack)}
-                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
-                      title="Дублировать набор для редактирования"
-                    >
-                      <Copy className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Копировать</span>
-                    </button>
+                    {canManagePacks && (
+                      <button
+                        onClick={() => handleDuplicate(selectedPack)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+                        title="Дублировать набор для редактирования"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Копировать</span>
+                      </button>
+                    )}
 
-                    {selectedPack.isCustom && (
+                    {selectedPack.isCustom && canManagePacks && (
                       <>
                         <button
                           onClick={() => {

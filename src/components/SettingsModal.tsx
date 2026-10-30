@@ -107,6 +107,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setStoredServerUrl(trimmed);
     if (changed) {
       // Socket привязан к адресу сервера при старте, поэтому перезагружаем клиент
+      try {
+        sessionStorage.setItem('spyverse_reopen_settings', 'true');
+      } catch {}
       window.location.reload();
       return;
     }

@@ -120,27 +120,16 @@ jobs:
         run: npm run add -w @spyverse/mobile
 
       - name: Set Android app version
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const version = require('./package.json').version;
-          const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
-          if (!match) throw new Error(`Expected a stable semantic version, got ${version}`);
-          const [, majorText, minorText, patchText] = match;
-          const [major, minor, patch] = [majorText, minorText, patchText].map(Number);
-          const versionCode = major * 1_000_000 + minor * 1_000 + patch;
-          const gradleFile = 'apps/mobile/android/app/build.gradle';
-          const gradle = fs.readFileSync(gradleFile, 'utf8')
-            .replace(/versionCode\s+\d+/, `versionCode ${versionCode}`)
-            .replace(/versionName\s+"[^"]+"/, `versionName "${version}"`);
-          fs.writeFileSync(gradleFile, gradle);
-          NODE
+        run: npm run set:android-version
 
       - name: Apply Android permissions
         run: cp apps/mobile/overrides/AndroidManifest.xml apps/mobile/android/app/src/main/AndroidManifest.xml
 
       - name: Sync Capacitor
         run: npm run sync -w @spyverse/mobile
+
+      - name: Generate Android app icon from desktop icon
+        run: npm run generate:android-icons
 
       - name: Build APK
         working-directory: apps/mobile/android

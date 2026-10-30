@@ -37,7 +37,13 @@ export function App() {
   const [currentMode, setCurrentMode] = useState<'menu' | 'pass_and_play' | 'online'>('menu');
 
   // Modals state
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
+    try {
+      return sessionStorage.getItem('spyverse_reopen_settings') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [isServerGuideOpen, setIsServerGuideOpen] = useState(false);
   const [isPacksOpen, setIsPacksOpen] = useState(false);
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
@@ -47,6 +53,12 @@ export function App() {
   const [isAutoUpdateSupported, setIsAutoUpdateSupported] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem('spyverse_reopen_settings');
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const electronAPI = window.electronAPI;

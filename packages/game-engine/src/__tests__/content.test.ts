@@ -5,6 +5,7 @@ import {
   validatePack,
   importPackFromJSON,
   exportPackToJSON,
+  mergeLocationPacks,
 } from '../../../content/src/index';
 
 test('all 19 official packs are loaded and valid', () => {
@@ -37,11 +38,30 @@ test('all 19 official packs are loaded and valid', () => {
     assert.ok(pack, `Official pack ${id} must exist`);
     const validation = validatePack(pack);
     assert.ok(validation.success, `Pack ${id} failed validation: ${validation.errors?.join(', ')}`);
-    assert.ok(pack.locations.length >= 4, `Pack ${id} must have at least 4 locations`);
+    assert.ok(pack.locations.length >= 10, `Pack ${id} must have at least 10 locations`);
+    assert.ok(pack.locations.length <= 12, `Pack ${id} must have no more than 12 locations`);
+    assert.equal(
+      new Set(pack.locations.map((location) => location.id)).size,
+      pack.locations.length,
+      `Pack ${id} must not contain duplicate location IDs`
+    );
     for (const loc of pack.locations) {
       assert.ok(loc.roles.length >= 3, `Location ${loc.name} must have at least 3 roles`);
     }
   }
+});
+
+test('mergeLocationPacks combines the locations from every selected pack', () => {
+  const packs = OFFICIAL_PACKS.slice(0, 3);
+  const merged = mergeLocationPacks(packs);
+
+  assert.ok(merged);
+  assert.equal(merged.locations.length, packs.reduce((count, pack) => count + pack.locations.length, 0));
+  assert.deepEqual(
+    merged.locations.map((location) => location.id),
+    packs.flatMap((pack) => pack.locations.map((location) => location.id))
+  );
+  assert.equal(mergeLocationPacks([]), undefined);
 });
 
 test('validatePack catches duplicate locations', () => {

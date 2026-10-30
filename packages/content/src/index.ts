@@ -79,3 +79,16 @@ export function findPackById(packId: string, customPacks: LocationPack[] = []): 
   const all = [...OFFICIAL_PACKS, ...customPacks];
   return all.find((p) => p.id === packId);
 }
+
+export function mergeLocationPacks(packs: LocationPack[]): LocationPack | undefined {
+  if (packs.length === 0) return undefined;
+  if (packs.length === 1) return packs[0];
+
+  return {
+    ...packs[0],
+    id: 'selected_packs',
+    name: `Выбрано наборов: ${packs.length}`,
+    description: 'Объединение выбранных наборов локаций.',
+    locations: packs.flatMap((pack) => pack.locations),
+  };
+}

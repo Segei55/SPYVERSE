@@ -8,7 +8,11 @@ import {
   PlayerSecret,
   RoomState,
 } from '../../../packages/shared/src/index';
-import { OFFICIAL_PACKS, findPackById } from '../../../packages/content/src/index';
+import {
+  OFFICIAL_PACKS,
+  findPackById,
+  mergeLocationPacks,
+} from '../../../packages/content/src/index';
 import {
   AVAILABLE_MODIFIERS,
   assignRoles,
@@ -200,11 +204,24 @@ export class RoomManager {
     // Пользовательские наборы используются только для выбора, в настройках комнаты не храним
     const { customPacks, ...sharedSettings } = newSettings;
 
-    const pack = findPackById(sharedSettings.packIds[0], customPacks);
+    const packIds = [...new Set(sharedSettings.packIds)];
+    const selectedPacks: LocationPack[] = [];
+    for (const packId of packIds) {
+      const pack = findPackById(packId, customPacks);
+      if (!pack) {
+        socket.emit('error_response', {
+          code: 'PACK_NOT_FOUND',
+          message: 'Один или несколько выбранных наборов локаций не найдены на сервере.',
+        });
+        return;
+      }
+      selectedPacks.push(pack);
+    }
+    const pack = mergeLocationPacks(selectedPacks);
     if (!pack) {
       socket.emit('error_response', {
         code: 'PACK_NOT_FOUND',
-        message: 'Выбранный набор локаций не найден на сервере.',
+        message: 'Не удалось объединить выбранные наборы локаций.',
       });
       return;
     }
@@ -213,6 +230,7 @@ export class RoomManager {
     const maxSpies = Math.max(1, Math.floor((room.players.size - 1) / 2));
     room.settings = {
       ...sharedSettings,
+      packIds,
       modifierIds:
         sharedSettings.modifierIds ??
         room.settings.modifierIds ??

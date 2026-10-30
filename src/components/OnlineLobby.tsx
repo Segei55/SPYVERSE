@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Users,
   Play,
@@ -46,6 +46,8 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
   unreadChatCount = 0,
 }) => {
   const [copiedCode, setCopiedCode] = useState(false);
+  const [selectedPackIds, setSelectedPackIds] = useState(() => roomState.settings.packIds);
+  const selectedPackIdsRef = useRef(selectedPackIds);
   const [modifierIds, setModifierIds] = useState<string[]>(
     () => roomState.settings.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id)
   );
@@ -71,6 +73,11 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
     setModifierIds(settings.modifierIds ?? AVAILABLE_MODIFIERS.map((modifier) => modifier.id));
   }, [settings.modifierIds]);
 
+  useEffect(() => {
+    selectedPackIdsRef.current = settings.packIds;
+    setSelectedPackIds(settings.packIds);
+  }, [settings.packIds]);
+
   const copyRoomCode = () => {
     sound.playClick();
     navigator.clipboard.writeText(roomState.roomId);
@@ -80,10 +87,18 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
 
   const handlePackChange = (packId: string) => {
     if (!isHost) return;
+    const currentPackIds = selectedPackIdsRef.current;
+    const isSelected = currentPackIds.includes(packId);
+    if (isSelected && currentPackIds.length === 1) return;
+    const nextPackIds = isSelected
+      ? currentPackIds.filter((id) => id !== packId)
+      : [...currentPackIds, packId];
+    selectedPackIdsRef.current = nextPackIds;
+    setSelectedPackIds(nextPackIds);
     sound.playClick();
     onUpdateSettings({
       ...settings,
-      packIds: [packId],
+      packIds: nextPackIds,
     });
   };
 
@@ -295,20 +310,32 @@ export const OnlineLobby: React.FC<OnlineLobbyProps> = ({
           <div>
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5 block flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-emerald-400" />
-              Набор локаций
+              Наборы локаций
             </label>
-            <select
-              disabled={!isHost}
-              value={settings.packIds[0] || OFFICIAL_PACKS[0].id}
-              onChange={(e) => handlePackChange(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-70"
-            >
+            <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-slate-700 bg-slate-950 p-2">
               {allPacks.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.locations.length} лок.)
-                </option>
+                <label
+                  key={p.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPackIds.includes(p.id)}
+                    disabled={
+                      !isHost ||
+                      (selectedPackIds.includes(p.id) && selectedPackIds.length === 1)
+                    }
+                    onChange={() => handlePackChange(p.id)}
+                    className="accent-emerald-500 disabled:opacity-60"
+                  />
+                  <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                  <span className="shrink-0 text-slate-500">{p.locations.length} лок.</span>
+                </label>
               ))}
-            </select>
+            </div>
+            <p className="mt-1.5 text-[10px] text-slate-500">
+              Выбрано: {selectedPackIds.length}. Локации будут браться из всех выбранных наборов.
+            </p>
           </div>
 
           {/* Duration Selector */}
